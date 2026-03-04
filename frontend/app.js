@@ -25,7 +25,7 @@ const btnProgress = generateBtn.querySelector(".btn-progress");
 const btnText = document.querySelector(".btn-text");
 const btnPercent = document.querySelector(".btn-percent");
 
-
+let jobRunning = false;
 
 
 /* ================= TAB SWITCHING ================= */
@@ -45,6 +45,9 @@ tabButtons.forEach(btn => {
 
     // Show selected
     const target = document.getElementById(btn.dataset.tab);
+    if (btn.dataset.tab === "tab2") {
+    loadLogs();
+    }
     if (target) {
       target.classList.add("active");
     }
@@ -337,7 +340,7 @@ function startBackendProgress(jobId) {
         a.click();
         a.remove();
         window.URL.revokeObjectURL(url);
-
+        jobRunning = false;
         resetFrontend();
         resetGenerateButton();
         showToast("Package generated successfully", "success");
@@ -345,7 +348,12 @@ function startBackendProgress(jobId) {
 
       if (status === "failed") {
         clearInterval(interval);
-        showToast("Packaging failed", "error");
+        if (data.log) {
+            showDownloadLogButton(data.log);
+        } else {
+            showToast("Packaging failed", "error");
+        }
+        jobRunning = false;
         resetGenerateButton();
       }
 
@@ -416,6 +424,11 @@ platform.addEventListener("change", updateButtonState);
 /* ---------- GENERATE BUTTON ---------- */
 generateBtn.onclick = async () => {
 
+    if (jobRunning) {
+    return;
+  }
+
+  jobRunning = true;
   const stkFile = stkInput.files[0];
   const agentFile = agentInput.files[0];
   const version = newVersion.value.trim();
@@ -423,6 +436,7 @@ generateBtn.onclick = async () => {
 
   if (!stkFile || !agentFile || !version || !plat) {
     showToast("All inputs are required", "error");
+    jobRunning = false;
     return;
   }
 
@@ -439,6 +453,7 @@ generateBtn.onclick = async () => {
     });
 
     if (!response.ok) {
+      jobRunning = false;
       showToast("Backend error", "error");
       return;
     }
@@ -459,3 +474,73 @@ generateBtn.onclick = async () => {
   }
 };
 
+async function loadLogs(){
+
+  const list = document.getElementById("logList");
+
+  try{
+
+    const res = await fetch("/logs");
+    const logs = await res.json();
+
+    if(!logs.length){
+      list.innerHTML = "No logs found";
+      return;
+    }
+
+    list.innerHTML = "";
+
+    logs.forEach(log => {
+
+      const parts = log.name.replace(".log","").split("_");
+
+      // last two values are always timestamp
+      const time = parts[parts.length - 1];
+      const date = parts[parts.length - 2];
+
+      // version always before timestamp
+      const version = parts[parts.length - 3];
+
+      // everything before version is platform
+      const platform = parts.slice(0, parts.length - 3).join("_");
+
+      const formattedDate =
+        `${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}`;
+
+      const formattedTime =
+        `${time.slice(0,2)}:${time.slice(2,4)}:${time.slice(4,6)}`;
+
+      const sizeKB = Math.round(log.size / 1024);
+
+      const row = document.createElement("div");
+      row.className = "log-item";
+
+      row.innerHTML = `
+        <div class="log-info">
+
+            <div class="log-title">
+                ${platform} • ${version}
+            </div>
+
+            <div class="log-meta">
+                Generated: ${formattedDate} ${formattedTime}
+                • ${sizeKB} KB
+            </div>
+
+        </div>
+
+        <button class="log-download" title="Download log">⬇</button>
+      `;
+
+      row.querySelector("button").onclick = () => {
+        window.location = "/download-log/" + log.name;
+      };
+
+      list.appendChild(row);
+
+    });
+
+  }catch(err){
+    list.innerHTML = "Failed to load logs";
+  }
+}

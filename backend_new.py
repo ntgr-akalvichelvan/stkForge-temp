@@ -6,6 +6,7 @@ import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 from flask import Flask, request, jsonify, send_file, Response, stream_with_context
 from flask_cors import CORS
@@ -19,10 +20,13 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
 # CONFIG
 # =====================================================
 
-WORK_DIR = "//home/swnuc04/arun/stkForge-temp/ImagePacking"
+WORK_DIR = "/home/vspl007/Downloads/Management_switch_Package/ImagePacking" #//home/swnuc04/arun/stkForge-temp/ImagePacking"
 SCRIPT_PATH = os.path.join(WORK_DIR, "run_packaging.sh")
 JOBS_DIR = os.path.join(WORK_DIR, "jobs")
 
+LOG_DIR = os.path.join(WORK_DIR, "logs")
+
+os.makedirs(LOG_DIR, exist_ok=True)
 os.makedirs(JOBS_DIR, exist_ok=True)
 
 ALLOWED_PLATFORMS = {
@@ -71,29 +75,54 @@ def run_packaging(job_id, job_meta):
     ]
 
     try:
-        process = subprocess.Popen(
-            cmd,
-            cwd=WORK_DIR,  
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True
-        )
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        for line in process.stdout:
-            print(f"[{job_id}] {line.strip()}")
-            if line.startswith("[PROGRESS]"):
-                try:
-                    pct = int(line.strip().split()[1])
-                    with jobs_lock:
-                        jobs[job_id]["progress"] = pct
-                except:
-                    pass
+        log_filename = f"{job_meta['platform']}_{job_meta['new_version']}_{timestamp}.log"
+        log_path = os.path.join(LOG_DIR, log_filename)
+
+        with open(log_path, "w") as logfile:
+
+            process = subprocess.Popen(
+                cmd,
+                cwd=WORK_DIR,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True
+            )
+
+            error_detected = False
+
+            for line in process.stdout:
+
+                logfile.write(line)
+                logfile.flush()
+
+                print(f"[{job_id}] {line.strip()}")
+
+                lower_line = line.lower()
+
+                # detect failure patterns
+                if "error:" in lower_line or "failed" in lower_line:
+                    error_detected = True
+
+                if line.startswith("[PROGRESS]"):
+                    try:
+                        pct = int(line.strip().split()[1])
+                        with jobs_lock:
+                            jobs[job_id]["progress"] = pct
+                    except:
+                        pass
 
         process.wait()
 
-        if process.returncode != 0:
+        if process.returncode != 0 or error_detected:
+
+            shutil.rmtree(job_dir, ignore_errors=True)
+
             with jobs_lock:
                 jobs[job_id]["status"] = "failed"
+                jobs[job_id]["log"] = log_filename
+
             return
 
         # ✅ Look inside outputs folder
@@ -102,6 +131,7 @@ def run_packaging(job_id, job_meta):
         if not os.path.isdir(outputs_dir):
             with jobs_lock:
                 jobs[job_id]["status"] = "failed"
+                jobs[job_id]["log"] = log_filename
             return
 
         output_files = [
@@ -112,6 +142,7 @@ def run_packaging(job_id, job_meta):
         if not output_files:
             with jobs_lock:
                 jobs[job_id]["status"] = "failed"
+                jobs[job_id]["log"] = log_filename
             return
 
         output_path = os.path.join(outputs_dir, output_files[0])
@@ -183,8 +214,9 @@ def get_progress(job_id):
         return jsonify({"status": "failed", "progress": 0})
 
     return jsonify({
-        "status": job["status"],
-        "progress": job["progress"]
+    "status": job["status"],
+    "progress": job["progress"],
+    "log": job.get("log")
     })
 
 # -----------------------------------------------------
@@ -223,6 +255,43 @@ def download(job_id):
             f"attachment; filename={os.path.basename(output_path)}"
         }
     )
+
+@app.route("/logs")
+def list_logs():
+
+    logs = []
+
+    for f in os.listdir(LOG_DIR):
+
+        if not f.endswith(".log"):
+            continue
+
+        path = os.path.join(LOG_DIR, f)
+
+        logs.append({
+            "name": f,
+            "size": os.path.getsize(path),
+            "mtime": os.path.getmtime(path)
+        })
+
+    logs.sort(key=lambda x: x["mtime"], reverse=True)
+
+    return jsonify(logs)
+
+@app.route("/download-log/<filename>")
+def download_log(filename):
+
+    path = os.path.join(LOG_DIR, filename)
+
+    if not os.path.exists(path):
+        return jsonify({"error": "Log not found"}), 404
+
+    return send_file(
+        path,
+        as_attachment=True,
+        download_name=filename
+    )
+
 
 @app.route("/")
 def serve_index():
