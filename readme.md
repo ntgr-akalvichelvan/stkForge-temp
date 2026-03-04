@@ -1,0 +1,22 @@
+Project title: stkForge
+
+description: 
+    Input: "M4350---.stk" | "App_Mgr.tar.gz" | new-version
+    Output: "M4xxx----.stk"
+    function: Unpacks the Image file (.stk), swaps old app-mgr file with new app-mgr file and changes the version
+              to give new Image file
+
+    Hosting in NUC -> swnuc04 (IP: 10.25.5.0) 
+    
+dependecies:
+    1) python3
+    2) gunicorn
+    3) flask
+    4) 'flask-cors' 
+    5) export mkimage to PATH
+    6) Install openlibssl-1.1 version (latest Ubuntu have openlibssl-1.3)
+
+
+Start Backend & Frontend Server
+
+gunicorn -w 1 -b 0.0.0.0:5000 --timeout 600 backend_new:app 
