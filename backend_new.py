@@ -4,7 +4,8 @@ import uuid
 import shutil
 import subprocess
 import threading
-import time
+import redis
+import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -44,11 +45,30 @@ app = Flask(__name__)
 CORS(app)
 
 # =====================================================
-# GLOBAL JOB STORE (Thread-Safe)
+# REDIS CONNECTION
 # =====================================================
 
-jobs = {}
-jobs_lock = threading.Lock()
+redis_client = redis.Redis(
+    host="localhost",
+    port=6379,
+    decode_responses=True
+)
+
+# =====================================================
+# REDIS JOB HELPERS
+# =====================================================
+
+def set_job(job_id, data):
+    redis_client.hset(f"job:{job_id}", mapping=data)
+
+def update_job(job_id, key, value):
+    redis_client.hset(f"job:{job_id}", key, value)
+
+def get_job(job_id):
+    return redis_client.hgetall(f"job:{job_id}")
+
+def delete_job(job_id):
+    redis_client.delete(f"job:{job_id}")
 
 # Limit concurrent packaging jobs
 executor = ThreadPoolExecutor(max_workers=4)
@@ -61,9 +81,8 @@ def run_packaging(job_id, job_meta):
 
     job_dir = job_meta["job_dir"]
 
-    with jobs_lock:
-        jobs[job_id]["status"] = "running"
-        jobs[job_id]["progress"] = 0
+    update_job(job_id, "status", "running")
+    update_job(job_id, "progress", 0)
 
     cmd = [
         SCRIPT_PATH,
@@ -108,8 +127,7 @@ def run_packaging(job_id, job_meta):
                 if line.startswith("[PROGRESS]"):
                     try:
                         pct = int(line.strip().split()[1])
-                        with jobs_lock:
-                            jobs[job_id]["progress"] = pct
+                        update_job(job_id, "progress", pct)
                     except:
                         pass
 
@@ -119,9 +137,8 @@ def run_packaging(job_id, job_meta):
 
             shutil.rmtree(job_dir, ignore_errors=True)
 
-            with jobs_lock:
-                jobs[job_id]["status"] = "failed"
-                jobs[job_id]["log"] = log_filename
+            update_job(job_id, "status", "failed")
+            update_job(job_id, "log", log_filename)
 
             return
 
@@ -129,9 +146,8 @@ def run_packaging(job_id, job_meta):
         outputs_dir = os.path.join(job_dir, "output")
 
         if not os.path.isdir(outputs_dir):
-            with jobs_lock:
-                jobs[job_id]["status"] = "failed"
-                jobs[job_id]["log"] = log_filename
+            update_job(job_id, "status", "failed")
+            update_job(job_id, "log", log_filename)
             return
 
         output_files = [
@@ -140,22 +156,20 @@ def run_packaging(job_id, job_meta):
         ]
 
         if not output_files:
-            with jobs_lock:
-                jobs[job_id]["status"] = "failed"
-                jobs[job_id]["log"] = log_filename
+            update_job(job_id, "status", "failed")
+            update_job(job_id, "log", log_filename)
             return
 
         output_path = os.path.join(outputs_dir, output_files[0])
 
-        with jobs_lock:
-            jobs[job_id]["progress"] = 100
-            jobs[job_id]["status"] = "finished"
-            jobs[job_id]["output"] = output_path
+        update_job(job_id, "progress", 100)
+        update_job(job_id, "status", "finished")
+        update_job(job_id, "output", output_path)
 
     except Exception as e:
         print("Packaging error:", e)
-        with jobs_lock:
-            jobs[job_id]["status"] = "failed"
+        update_job(job_id, "status", "failed")
+        update_job(job_id, "log", log_filename)
 # =====================================================
 # ROUTES
 # =====================================================
@@ -184,12 +198,13 @@ def generate():
     stk_file.save(stk_path)
     agent_file.save(agent_path)
 
-    with jobs_lock:
-        jobs[job_id] = {
-            "status": "queued",
-            "progress": 0,
-            "output": None
-        }
+    set_job(job_id, {
+        "status": "queued",
+        "progress": 0,
+        "output": ""
+    })
+
+    redis_client.expire(f"job:{job_id}", 3600)
 
     executor.submit(run_packaging, job_id, {
         "platform": ALLOWED_PLATFORMS[platform_ui],
@@ -207,25 +222,23 @@ def generate():
 @app.route("/progress/<job_id>")
 def get_progress(job_id):
 
-    with jobs_lock:
-        job = jobs.get(job_id)
+    job = get_job(job_id)
 
     if not job:
         return jsonify({"status": "failed", "progress": 0})
 
     return jsonify({
-    "status": job["status"],
-    "progress": job["progress"],
+    "status": job.get("status"),
+    "progress": int(job.get("progress", 0)),
     "log": job.get("log")
-    })
+})
 
 # -----------------------------------------------------
 
 @app.route("/download/<job_id>")
 def download(job_id):
 
-    with jobs_lock:
-        job = jobs.get(job_id)
+    job = get_job(job_id)
 
     if not job or job["status"] != "finished":
         return jsonify({"message": "Not ready"}), 400
@@ -244,8 +257,7 @@ def download(job_id):
     # Cleanup BEFORE returning response
     shutil.rmtree(job_dir, ignore_errors=True)
 
-    with jobs_lock:
-        jobs.pop(job_id, None)
+    delete_job(job_id)
 
     return Response(
         file_data,

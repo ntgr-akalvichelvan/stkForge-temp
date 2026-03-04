@@ -15,8 +15,10 @@ dependecies:
     4) 'flask-cors' 
     5) export mkimage to PATH
     6) Install openlibssl-1.1 version (latest Ubuntu have openlibssl-1.3)
-
+    7) redis-server
+    8) python3-redis
 
 Start Backend & Frontend Server
 
-gunicorn -w 1 -b 0.0.0.0:5000 --timeout 600 backend_new:app 
+    gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app
+
