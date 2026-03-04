@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>STK Package Generator</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-grid">
+
+    <!-- LEFT: BRAND -->
+    <div class="brand">
+    <img src="netgear_logo_white.png" alt="NETGEAR" class="brand-logo">
+    <span class="brand-switch">SWITCH</span>
+    </div>
+
+    <!-- CENTER: TITLE -->
+    <div class="header-center">
+      <div class="header-title">Managed Switch STK Forge</div>
+      <div class="header-subtitle">
+        Create and sign firmware packages for Managed Switch
+      </div>
+    </div>
+
+    <!-- RIGHT: ACCENT (unchanged) -->
+    <div class="header-accent"></div>
+
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="app-wrapper">
+<div class="app">
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" data-tab="tab1">STK Package</button>
+  <button class="tab-btn" data-tab="tab2">Logs & Tools</button>
+</div>
+
+<!-- TAB CONTENT WRAPPER -->
+<div class="tab-content active" id="tab1">
+<div class="card">
+  <!-- STK FILE -->
+<label class="upload-label">IMAGE STK File (.stk)</label>
+<div class="upload-card" id="stkBtn">
+  <div class="upload-icon">⬆</div>
+
+  <div class="upload-text">
+    <span class="primary" id="stkBtnText">Select STK File</span>
+  </div>
+
+  <span class="clear-btn" id="clearStkBtn">✕</span>
+</div>
+
+<input type="file" id="stkInput" accept=".stk" hidden>
+
+
+
+<!-- CURRENT VERSION -->
+<div class="current-version-box" id="currentVersionBox">
+  <div class="title">Current Version</div>
+  <div class="value" id="currentVersionValue">—</div>
+</div>
+
+
+<!-- AGENT FILE -->
+<label class="upload-label">Agent File (.tar.gz)</label>
+<div class="upload-card" id="agentBtn">
+  <div class="upload-icon">⬆</div>
+
+  <div class="upload-text">
+    <span class="primary" id="agentBtnText">Select Agent File</span>
+  </div>
+
+  <span class="clear-btn" id="clearAgentBtn">✕</span>
+</div>
+
+<input type="file" id="agentInput" accept=".tar,.gz,.tgz" hidden>
+
+
+  <!-- VERSION -->
+  <label>New Version Name</label>
+  <div class="new-version-row">
+    <input type="text" id="newVersion">
+    <div class="version-msg">
+      <span id="versionError" class="version-error"></span>
+      <span id="versionWarning" class="version-warning"></span>
+      <span id="versionCorrect" class="version-correct"></span>
+    </div>
+  </div>
+
+  <!-- PLATFORM -->
+  <label>Platform</label>
+  <select id="platform">
+    <option value="">Select Platform</option>
+    <option>M4350</option>
+    <option>M4300</option>
+    <option>M4250 IM</option>
+    <option>M4250 LK</option>
+  </select>
+
+  <button id="generateBtn">
+  <span class="btn-progress">
+    <span class="btn-shimmer"></span>
+  </span>
+
+  <span class="btn-label">
+    <span class="btn-text">Generate Signed Package</span>
+    <span class="btn-percent"></span>
+  </span>
+</button>
+
+
+
+</div>
+</div> <!-- tab1 end -->
+
+<!-- TAB 2 CONTENT -->
+<div class="tab-content" id="tab2">
+  <div class="card">
+    <h2 style="margin-top:0;">Logs & Utilities</h2>
+    <p style="color:#64748b; margin-bottom:20px;">
+      View generation logs or perform additional tools.
+    </p>
+
+    <button style="width:100%; margin-bottom:15px;">
+      Download Last Log
+    </button>
+
+    <button style="width:100%;">
+      Validate Existing STK
+    </button>
+  </div>
+</div>
+<div class="footer">
+  The generated package will be downloaded to your default downloads folder
+</div>
+
+</div>
+</div>
+
+<div class="app-footer">
+© 2026 NETGEAR · Designed by Switch Development Team
+</div>
+
+  <div id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

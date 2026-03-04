@@ -1,0 +1,7 @@
+name=SecureDiagnostics
+file=/usr/bin/remote_access
+startonboot=0
+autorestart=0
+cpusharing=0
+maxmegabytes=0
+version=1.3.9

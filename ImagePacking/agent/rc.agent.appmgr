@@ -1,0 +1,12 @@
+#!/bin/sh
+
+TARGET_DIR=/
+PKG_NAME=appmgr.tar.gz
+
+appmgr_init()
+{
+    #Check whether the file exists
+    echo "Extracting Original appmgr package..."
+    tar xf $PKG_NAME -C ${TARGET_DIR}
+    rm -rf $PKG_NAME
+}

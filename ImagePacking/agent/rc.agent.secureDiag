@@ -1,0 +1,12 @@
+#!/bin/sh
+
+TARGET_DIR=/
+PKG_NAME=SecureDiagnostics.tar.gz
+
+secureDiag_init()
+{
+    # extract package
+    echo -n "Extracting Secure Diag agent package..."
+    tar xf $PKG_NAME -C ${TARGET_DIR}
+}
+

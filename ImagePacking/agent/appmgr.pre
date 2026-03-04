@@ -1,0 +1,7 @@
+name=appmgr
+file=/usr/local/appmgr/usr/sbin/appmgr
+startonboot=1
+autorestart=1
+cpusharing=0
+maxmegabytes=0
+version=1.0.5.27

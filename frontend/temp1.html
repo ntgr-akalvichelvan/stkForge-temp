@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>STK Package Generator</title>
+
+<style>
+  * {
+    box-sizing: border-box;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    margin: 0;
+    background: #f6f8fb;
+    display: flex;
+    justify-content: center;
+    padding-top: 60px;
+    color: #0f172a;
+  }
+
+  .app {
+    width: 720px;
+  }
+
+  /* NETGEAR */
+  .logo {
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+  /* NETGEAR Logo */
+  .logo-crop {
+    height: 60px;            /* FINAL visible height */
+    overflow: hidden;
+    display: inline-block;
+  }
+
+  /* Actual image */
+  .logo-img {
+    height: 220px;           /* Bigger than crop */
+    width: auto;
+    display: block;
+
+    /* Crop vertically by shifting */
+    transform: translateY(-80px);
+
+    /* Optional blend */
+    mix-blend-mode: linear-burn;
+    filter: contrast(1.15);
+  }
+
+
+  h1 {
+    text-align: center;
+    font-size: 30px;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: #64748b;
+    margin-bottom: 36px;
+  }
+
+  .card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 32px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  }
+
+  label {
+    font-size: 14px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  /* Upload Box */
+  .upload-box {
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #2563eb;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 12px;
+  }
+
+  .upload-icon {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    transform: translateY(-1px);
+  }
+
+  input[type="file"] {
+    display: none;
+  }
+
+  /* File name display */
+  .file-name {
+    background: #f8fafc;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #334155;
+    margin-bottom: 22px;
+    display: none;
+  }
+
+  /* Current Version */
+  .current-version-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 22px;
+    display: none;
+  }
+
+  .current-version-box .title {
+    font-size: 13px;
+    color: #2563eb;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .current-version-box .value {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .current-version-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  }
+
+    .new-version-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .new-version-row input {
+    flex: 1;
+  }
+
+  .version-msg {
+    min-width: 260px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .version-error {
+    color: #dc2626;
+    display: none;
+  }
+
+  .version-warning {
+    color: #d97706;
+    display: none;
+  }
+  .version-correct {
+    color: #0dd906;
+    display: none;
+  }
+
+  input[type="text"], select {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    margin-bottom: 22px;
+  }
+
+  button {
+    width: 100%;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    background: #cbd5e1;
+    color: white;
+    cursor: not-allowed;
+  }
+
+  button.enabled {
+    background: #2563eb;
+    cursor: pointer;
+  }
+
+  .footer {
+    text-align: center;
+    margin-top: 18px;
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  #toastContainer {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+.app-footer {
+  margin-top: 40px;
+  padding: 12px 0;
+  text-align: center;
+  font-size: 20px;
+  color: #6b7280;
+}
+
+.toast {
+  background: #1f2937;
+  color: white;
+  padding: 14px 18px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  min-width: 280px;
+  font-size: 14px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  animation: slideIn 0.3s ease, fadeOut 0.3s ease 3s forwards;
+}
+
+.toast.error {
+  background: #dc2626;
+}
+
+.toast.success {
+  background: #16a34a;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(120%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes fadeOut {
+  to { opacity: 0; transform: translateX(120%); }
+}
+
+
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <div class="logo">
+  <div class="logo-crop">
+    <img src="netgear_logo_2.png"
+         alt="NETGEAR"
+         class="logo-img">
+  </div>
+  </div>
+
+
+
+  <h1>Managed Switch STK Forge</h1>
+  <div class="subtitle">Create and sign firmware packages for Managed Switch</div>
+
+  <div class="card">
+
+    <!-- STK FILE -->
+    <label>IMAGE STK File (.stk)</label>
+    <div class="upload-box" id="stkBtn">
+      <img src="icons8-upload-48.png" class="upload-icon" alt="upload">
+      <span id="stkBtnText">Select STK File</span>
+    </div>
+    <input type="file" id="stkInput" accept=".stk">
+
+        <div class="file-name" id="stkFileName"></div>
+    <div class="current-version-box" id="currentVersionBox">
+      <div class="title">Current Version</div>
+      <div class="value" id="currentVersionValue"></div>
+    </div>
+
+
+    <!-- AGENT FILE -->
+    <label>Agent File (.tar.gz)</label>
+    <div class="upload-box" id="agentBtn">
+      <img src="icons8-upload-48.png" class="upload-icon" alt="upload">
+      <span id="agentBtnText">Select Agent File</span>
+    </div>
+    <input type="file" id="agentInput" accept=".tar,.gz,.tgz,*/*">
+
+    <div class="file-name" id="agentFileName"></div>
+    
+
+    <!-- NEW VERSION -->
+    <label>New Version Name</label>
+    <div class="new-version-row">
+      <input type="text" id="newVersion" placeholder="e.g. 14.0.6.16">
+
+      <div class="version-msg">
+        <span id="versionError" class="version-error"></span>
+        <span id="versionWarning" class="version-warning"></span>
+        <span id="versionCorrect" class="version-correct"></span>
+      </div>
+    </div>
+
+
+    <!-- PLATFORM -->
+    <label>Platform</label>
+    <select id="platform">
+      <option value="">Select Platform</option>
+      <option>M4350</option>
+      <option>M4300</option>
+      <option>M4250 IM</option>
+      <option>M4250 LK</option>
+    </select>
+
+    <button id="generateBtn">Generate Signed Package</button>
+
+  </div>
+
+  <div class="footer">
+    The generated package will be downloaded to your default downloads folder
+  </div>
+  
+  <footer class="app-footer">
+  © 2026 NETGEAR · Designed by Switch Development Team
+  </footer>
+
+
+</div>
+
+<script>
+/* ---------- ELEMENT REFERENCES ---------- */
+const stkInput = document.getElementById("stkInput");
+const agentInput = document.getElementById("agentInput");
+
+const stkBtn = document.getElementById("stkBtn");
+const agentBtn = document.getElementById("agentBtn");
+
+const stkBtnText = document.getElementById("stkBtnText");
+const agentBtnText = document.getElementById("agentBtnText");
+
+const stkFileName = document.getElementById("stkFileName");
+const agentFileName = document.getElementById("agentFileName");
+
+const versionBox = document.getElementById("currentVersionBox");
+const versionValue = document.getElementById("currentVersionValue");
+
+const newVersion = document.getElementById("newVersion");
+const platform = document.getElementById("platform");
+const generateBtn = document.getElementById("generateBtn");
+
+/* ---------- BUTTON CLICK HANDLERS ---------- */
+stkBtn.onclick = () => stkInput.click();
+agentBtn.onclick = () => agentInput.click();
+
+/* ---------- ENABLE / DISABLE GENERATE BUTTON ---------- */
+function updateButtonState() {
+  const versionOk = validateVersionInput();
+
+  if (
+    stkInput.files.length &&
+    agentInput.files.length &&
+    newVersion.value.trim() &&
+    platform.value &&
+    versionOk
+  ) {
+    generateBtn.classList.add("enabled");
+    generateBtn.disabled = false;
+  } else {
+    generateBtn.classList.remove("enabled");
+    generateBtn.disabled = true;
+  }
+}
+
+/* ---------- STK FILE SELECTION ---------- */
+stkInput.addEventListener("change", () => {
+  const file = stkInput.files[0];
+  if (!file) return;
+
+  // Show filename
+  stkFileName.style.display = "block";
+  stkFileName.textContent = file.name;
+
+  // -------- Extract version (robust) --------
+  // Matches:
+  // m4300v12.0.19.16.stk
+  // M4300-V12.0.19.16.stk
+  // M4350v14.0.6.25.STK
+  const match = file.name.match(
+    /[vV]([\d]+\.[\d]+\.[\d]+\.[\d]+)\.stk$/i
+  );
+
+  versionValue.textContent = match ? match[1] : "UNKNOWN";
+  versionBox.style.display = "block";
+
+  // -------- Auto-detect platform --------
+  const detectedPlatform = detectPlatformFromFilename(file.name);
+  if (detectedPlatform) {
+    platform.value = detectedPlatform;
+  }
+
+  // Update button text
+  stkBtnText.textContent = "Change STK File";
+
+  updateButtonState();
+});
+
+
+/* ---------- AGENT FILE SELECTION ---------- */
+agentInput.addEventListener("change", () => {
+  const file = agentInput.files[0];
+  if (!file) return;
+
+  agentFileName.style.display = "block";
+  agentFileName.textContent = file.name;
+
+  agentBtnText.textContent = "Change Agent File";
+  updateButtonState();
+});
+
+function detectPlatformFromFilename(filename) {
+  const name = filename.toUpperCase();
+
+  if (name.startsWith("M4350")) return "M4350";
+  if (name.startsWith("M4300")) return "M4300";
+
+  // Handle M4250 variants (heuristic / extendable)
+  if (name.startsWith("M4250H")) {
+    return "M4250 IM"; // default
+  }
+
+  if (name.startsWith("M4250L")) {
+    return "M4250 LK";
+  }
+  
+  return "";
+}
+
+function showToast(message, type = "error") {
+  const container = document.getElementById("toastContainer");
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() => toast.remove(), 3500);
+}
+
+function extractFilename(disposition) {
+  if (!disposition) return null;
+
+  //RFC 5987 (preferred): filename*=
+  const utf8Match = disposition.match(/filename\*\=UTF-8''([^;]+)/i);
+  if (utf8Match) {
+    return decodeURIComponent(utf8Match[1]);
+  }
+
+  //Standard: filename=
+  const asciiMatch = disposition.match(/filename="([^"]+)"/i);
+  if (asciiMatch) {
+    return asciiMatch[1];
+  }
+
+  return null;
+}
+
+function parseVersion(v) {
+  const parts = v.split(".").map(n => Number(n));
+  if (parts.length !== 4 || parts.some(isNaN)) return null;
+  return parts;
+}
+
+function comparePrefix(a, b) {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+}
+
+
+function validateVersionInput() {
+  const errorEl = document.getElementById("versionError");
+  const warnEl = document.getElementById("versionWarning");
+  const validEl = document.getElementById("versionCorrect");
+
+  errorEl.style.display = "none";
+  warnEl.style.display = "none";
+  validEl.style.display = "none";
+
+  const current = versionValue.textContent;
+  const input = newVersion.value.trim();
+
+  if (!current || current === "UNKNOWN" || !input) return false;
+
+  const curr = parseVersion(current);
+  const next = parseVersion(input);
+
+  if (!curr || !next) {
+    errorEl.textContent = "Invalid version format (use X.Y.Z.N)";
+    errorEl.style.display = "inline";
+    return false;
+  }
+
+  /* ---------- NUMERIC comparison ---------- */
+  for (let i = 0; i < 4; i++) {
+    if (next[i] > curr[i]) break;
+    if (next[i] < curr[i]) {
+      errorEl.textContent =
+        `New version must be greater than ${current}`;
+      errorEl.style.display = "inline";
+      return false;
+    }
+  }
+
+  /* ---------- Same major.minor.patch ---------- */
+  if (comparePrefix(curr, next)) {
+    validEl.textContent = `Valid version (expected ${curr[3]+1})`;
+    validEl.style.display = "inline";
+    return true;
+  }
+
+  /* ---------- Prefix changed → warning ---------- */
+  warnEl.textContent =
+    `Warning: Release / Version / Maintenance changed (${current} → ${input})`;
+  warnEl.style.display = "inline";
+
+  return true;
+}
+
+
+
+/* ---------- INPUT LISTENERS ---------- */
+newVersion.addEventListener("input", () => {
+  validateVersionInput();
+  updateButtonState();
+});
+
+platform.addEventListener("change", updateButtonState);
+
+/* ---------- GENERATE BUTTON ---------- */
+generateBtn.onclick = async () => {
+  const stkFile = stkInput.files[0];
+  const agentFile = agentInput.files[0];
+  const version = newVersion.value.trim();
+  const plat = platform.value;
+
+  if (!stkFile || !agentFile || !version || !plat) {
+    showToast("All inputs are required", "error");
+    return;
+  }
+
+  generateBtn.disabled = true;
+  generateBtn.textContent = "Generating...";
+
+  /* ---------- FRONTEND GENERATED FILENAME ---------- */
+  /*
+    Examples handled:
+    m4350-v14.6.0.13.stk   → M4350-V14.6.0.14.stk
+    m4300v12.0.19.16.stk  → M4300V12.0.19.20.stk
+    M4250_LK_v13.0.5.21.stk → M4250_LK_V13.0.5.26.stk
+  */
+
+  let outputFilename = "SIGNED_IMAGE.stk";
+
+  const match = stkFile.name.match(
+    /^(.*?)([._-]?v)\d+\.\d+\.\d+\.\d+(\.stk)$/i
+  );
+
+  if (match) {
+    const base = match[1];          // platform + suffix
+    const vToken = match[2];        // v / -v / _v
+    const ext = match[3];           // .stk
+
+    outputFilename =
+      `${base}${vToken.toUpperCase()}${version}${ext}`;
+  }
+
+
+  const formData = new FormData();
+  formData.append("stkFile", stkFile);
+  formData.append("agentFile", agentFile);
+  formData.append("newVersion", version);
+  formData.append("platform", plat);
+
+  try {
+    const response = await fetch("http://127.0.0.1:5000/generate", {
+      method: "POST",
+      body: formData
+    });
+
+    const contentType = response.headers.get("content-type") || "";
+
+    /* ---------- ERROR RESPONSE ---------- */
+    if (contentType.includes("application/json")) {
+      const result = await response.json();
+      showToast(result.message || "Operation failed", "error");
+      return;
+    }
+
+    if (!response.ok) {
+      showToast("Backend error", "error");
+      return;
+    }
+
+    /* ---------- FILE DOWNLOAD ---------- */
+    const blob = await response.blob();
+
+    /* ---------- VERSION WARNING (NON-BLOCKING) ---------- */
+    const warning = response.headers.get("X-Warning-Message");
+    if (warning) {
+      showToast(warning.replace("->", "→"), "warning");
+    }
+
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = outputFilename;   // ✅ FRONTEND CONTROLS NAME
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    showToast("Package generated successfully", "success");
+
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to connect to backend", "error");
+  } finally {
+    generateBtn.disabled = false;
+    generateBtn.textContent = "Generate Signed Package";
+    updateButtonState();
+  }
+};
+
+</script>
+
+<div id="toastContainer"></div>
+
+</body>
+</html>
