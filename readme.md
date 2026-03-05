@@ -20,4 +20,4 @@ dependecies:
 
 Start Backend & Frontend Server
 
-gunicorn -w 1 -b 0.0.0.0:5000 --timeout 600 backend_new:app 
+gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app
