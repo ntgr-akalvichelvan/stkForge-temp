@@ -17,6 +17,7 @@ dependecies:
     6) Install openlibssl-1.1 version (latest Ubuntu have openlibssl-1.3)
     7) redis-server
     8) python3-redis
+    9) apt install device-tree-compiler (needed for dtc compilation)
 
 Start Backend & Frontend Server
 
