@@ -464,6 +464,23 @@ input[type="text"], select {
 .version-warning { color: #d97706; display: none; }
 .version-correct { color: #16a34a; display: none; }
 
+.input-error-message {
+  color: #e5484d;
+  font-size: 13px;
+  margin-top: 6px;
+  display: none;
+  font-weight: 500;
+}
+#platformError {
+  color: #e5484d;
+  font-size: 13px;
+  font-weight: 500;
+  
+  margin-bottom: 12px;
+
+  display: none;
+}
+
 /* ================= BUTTON ================= */
 button {
   width: 100%;

@@ -21,7 +21,7 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
 # CONFIG
 # =====================================================
 
-WORK_DIR = "/home/swnuc04/arun/stkForge-temp/ImagePacking"
+WORK_DIR = "/home/vspl007/Downloads/Management_switch_Package/ImagePacking"     #"/home/swnuc04/arun/stkForge-temp/ImagePacking"
 SCRIPT_PATH = os.path.join(WORK_DIR, "run_packaging.sh")
 JOBS_DIR = os.path.join(WORK_DIR, "jobs")
 

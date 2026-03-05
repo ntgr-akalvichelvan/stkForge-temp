@@ -85,14 +85,17 @@ agentBtn.onclick = () => {
 
 /* ---------- ENABLE / DISABLE GENERATE BUTTON ---------- */
 function updateButtonState() {
+
   const versionOk = validateVersionInput();
+  const platformOk = validatePlatformMatch();
 
   if (
     stkInput.files.length &&
     agentInput.files.length &&
     newVersion.value.trim() &&
     platform.value &&
-    versionOk
+    versionOk &&
+    platformOk
   ) {
     generateBtn.classList.add("enabled");
     generateBtn.disabled = false;
@@ -131,18 +134,34 @@ stkInput.addEventListener("change", () => {
 
 /* ---------- AGENT FILE SELECTION ---------- */
 agentInput.addEventListener("change", () => {
+
   const file = agentInput.files[0];
   if (!file) return;
 
   agentBtnText.textContent = file.name;
   agentBtn.classList.add("has-file");
 
-  // ICON → X
   agentIcon.textContent = "✕";
 
+  validatePlatformMatch();
   updateButtonState();
 });
 
+function detectRawPlatform(filename) {
+
+  const name = filename.toUpperCase();
+
+  if (name.match(/^M4350/)) return "M4350";
+  if (name.match(/^M4300/)) return "M4300";
+
+  if (name.match(/^M4250[\-_]?H/) || name.includes("M4250_IM"))
+    return "M4250H";
+
+  if (name.match(/^M4250[\-_]?L/) || name.includes("M4250_LK"))
+    return "M4250L";
+
+  return "";
+}
 
 function detectPlatformFromFilename(filename) {
   const name = filename.toUpperCase();
@@ -160,6 +179,38 @@ function detectPlatformFromFilename(filename) {
   }
   
   return "";
+}
+
+function validatePlatformMatch() {
+
+  const errorEl = document.getElementById("platformError");
+  errorEl.style.display = "none";
+
+  const stkFile = stkInput.files[0];
+  const agentFile = agentInput.files[0];
+
+  if (!stkFile || !agentFile) return true;
+
+  const stkRaw = detectRawPlatform(stkFile.name);
+  const agentRaw = detectRawPlatform(agentFile.name);
+
+  if (!stkRaw || !agentRaw) {
+    errorEl.textContent = "Unable to detect platform from filenames";
+    errorEl.style.display = "block";
+    return false;
+  }
+
+  if (stkRaw !== agentRaw) {
+
+    errorEl.textContent =
+      `Platform mismatch: STK (${stkRaw}) ≠ Agent (${agentRaw})`;
+
+    errorEl.style.display = "block";
+
+    return false;
+  }
+
+  return true;
 }
 
 function showToast(message, type = "error") {
