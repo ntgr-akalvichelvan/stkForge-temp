@@ -38,7 +38,7 @@
 <!-- TABS -->
 <div class="tabs">
   <button class="tab-btn active" data-tab="tab1">STK Package</button>
-  <button class="tab-btn" data-tab="tab2">Logs & Tools</button>
+  <button class="tab-btn" data-tab="tab2">Logs</button>
 </div>
 
 <!-- TAB CONTENT WRAPPER -->
@@ -125,27 +125,52 @@
 <div class="tab-content" id="tab2">
   <div class="card">
 
-    <h2 class="logs-title">Generation Logs</h2>
+    <div class="logs-header">
 
-    <div id="logList" class="log-list">
-      Loading logs...
-    </div>
+  <h2 class="logs-title">Generation Logs</h2>
 
+  <div class="log-sort">
+    <button class="sort-btn active" data-sort="1hr">1hr</button>
+    <button class="sort-btn" data-sort="today">Today</button>
+    <button class="sort-btn" data-sort="yesterday">Yesterday</button>
+    <button class="sort-btn" data-sort="week">Week</button>
+    <button class="sort-btn" data-sort="all">All</button>
   </div>
+
+</div>
+
+<div id="logList" class="log-list">
+  Loading logs...
+</div>
+</div>
 </div>
 <div class="footer">
   The generated package will be downloaded to your default downloads folder
 </div>
-
-</div>
-</div>
-
 <div class="app-footer">
 © 2026 NETGEAR · Designed by Switch Development Team
 </div>
 
   <div id="toastContainer"></div>
+<div id="deleteModal" class="modal">
 
+  <div class="modal-box">
+
+    <div class="modal-title">Delete Log</div>
+
+    <div class="modal-info">
+      <div id="modalLogName"></div>
+      <div id="modalLogMeta"></div>
+    </div>
+
+    <div class="modal-actions">
+      <button id="cancelDelete" class="modal-cancel">Cancel</button>
+      <button id="confirmDelete" class="modal-delete">Delete</button>
+    </div>
+
+  </div>
+
+</div>
   <script src="app.js"></script>
 </body>
 </html>

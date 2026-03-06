@@ -7,7 +7,7 @@ import threading
 import redis
 import json
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Flask, request, jsonify, send_file, Response, stream_with_context
 from flask_cors import CORS
@@ -170,6 +170,23 @@ def run_packaging(job_id, job_meta):
         print("Packaging error:", e)
         update_job(job_id, "status", "failed")
         update_job(job_id, "log", log_filename)
+
+
+def cleanup_old_logs():
+
+    now = datetime.now()
+
+    for f in os.listdir(LOG_DIR):
+
+        path = os.path.join(LOG_DIR, f)
+
+        if not os.path.isfile(path):
+            continue
+
+        created = datetime.fromtimestamp(os.path.getmtime(path))
+
+        if now - created > timedelta(days=10):
+            os.remove(path)
 # =====================================================
 # ROUTES
 # =====================================================
@@ -271,6 +288,9 @@ def download(job_id):
 @app.route("/logs")
 def list_logs():
 
+    #clean up old logs
+    cleanup_old_logs()
+    
     logs = []
 
     for f in os.listdir(LOG_DIR):
@@ -304,6 +324,17 @@ def download_log(filename):
         download_name=filename
     )
 
+@app.route("/delete-log/<filename>", methods=["DELETE"])
+def delete_log(filename):
+
+    path = os.path.join(LOG_DIR, filename)
+
+    if not os.path.exists(path):
+        return jsonify({"error": "Log not found"}), 404
+
+    os.remove(path)
+
+    return jsonify({"status": "deleted"})
 
 @app.route("/")
 def serve_index():

@@ -8,13 +8,14 @@ html, body {
 
 body {
   margin: 0;
-  min-height: 100vh;          
-  display: flex;             
-  flex-direction: column;    
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: #f5f7fa;
   color: #0f172a;
-}
 
+  padding-bottom: 70px; /* space for fixed footer */
+}
 
 /* ================= HEADER ================= */
 .header {
@@ -600,12 +601,18 @@ button {
 }
 
 .app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+
   background: #1f2a37;
   color: #cbd5e1;
   text-align: center;
   padding: 18px;
   font-size: 14px;
-  flex-shrink: 0;   
+
+  z-index: 1000;
 }
 
 /* ================= LOG LIST ================= */
@@ -621,7 +628,7 @@ button {
   flex-direction:column;
   gap:14px;
 
-  max-height:260px;
+  max-height:480px;
   overflow-y:auto;
 
   padding-right:6px;
@@ -647,6 +654,13 @@ button {
   font-weight:600;
   font-size:15px;
   color:#0f172a;
+}
+
+.logs-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:12px;
 }
 
 .log-meta{
@@ -717,6 +731,148 @@ button {
   transform:scale(1.05);
 }
 
+
+/* ===== LOG SORT CONTROL ===== */
+
+.log-sort{
+  display:flex;
+  gap:4px;
+  background:#eef2f6;
+  padding:4px;
+  border-radius:10px;
+}
+
+.sort-btn{
+  border:none;
+  padding:6px 12px;
+  border-radius:8px;
+  font-size:13px;
+  font-weight:600;
+  background:transparent;
+  color:#475569;
+  cursor:pointer;
+  transition:all 0.2s ease;
+}
+
+.sort-btn:hover{
+  background:#e6f7f1;
+}
+
+.sort-btn.active{
+  background:linear-gradient(135deg,#0ea5a4,#22c55e);
+  color:white;
+  box-shadow:0 3px 10px rgba(0,0,0,0.15);
+}
+
+/* ===== DELETE MODAL ===== */
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.35);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
+}
+
+.modal.show{
+  display:flex;
+}
+
+.modal-box{
+  background:white;
+  border-radius:14px;
+  padding:28px 32px;
+  width:420px;
+
+  box-shadow:0 20px 50px rgba(0,0,0,0.25);
+
+  animation:modalPop .2s ease;
+}
+
+@keyframes modalPop{
+  from{
+    transform:scale(.9);
+    opacity:0;
+  }
+  to{
+    transform:scale(1);
+    opacity:1;
+  }
+}
+
+.modal-title{
+  font-size:20px;
+  font-weight:700;
+  margin-bottom:12px;
+}
+
+.modal-info{
+  background:#f8fafc;
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:20px;
+}
+
+.modal-info div{
+  font-size:18px;
+  margin-bottom:4px;
+}
+
+.modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.modal-cancel{
+  background:#e5e7eb;
+  border:none;
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.modal-delete{
+  background:#dc2626;
+  color:white;
+  border:none;
+  padding:8px 14px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.log-delete{
+
+  width:38px;
+  height:38px;
+
+  border-radius:50%;
+  border:none;
+
+  background:#ef4444;
+  color:white;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:18px;
+  line-height:1;
+
+  cursor:pointer;
+
+  flex-shrink:0;
+}
+
+.log-delete:hover{
+  transform:scale(1.05);
+}
+
+.log-delete:hover ~ *{
+  border-color:initial;
+}
 /* ================= TOAST ================= */
 #toastContainer {
     position: fixed;

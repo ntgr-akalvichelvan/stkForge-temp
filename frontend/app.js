@@ -566,25 +566,34 @@ async function loadLogs(){
       const row = document.createElement("div");
       row.className = "log-item";
 
+      row.dataset.time = log.mtime * 1000;
+
       row.innerHTML = `
-        <div class="log-info">
-
-            <div class="log-title">
-                ${platform} • ${version}
-            </div>
-
-            <div class="log-meta">
-                Generated: ${formattedDate} ${formattedTime}
-                • ${sizeKB} KB
-            </div>
-
-        </div>
-
-        <button class="log-download" title="Download log">⬇</button>
-      `;
+      <div class="log-info">
+          <div class="log-title">
+              ${platform} • ${version}
+          </div>
+          <div class="log-meta">
+              Generated: ${formattedDate} ${formattedTime}
+              • ${sizeKB} KB
+          </div>
+      </div>
+      <div class="log-actions">
+          <button class="log-download" title="Download log">⬇</button>
+          <button class="log-delete" title="Delete log">🗑</button>
+      </div>
+    `;
 
       row.querySelector("button").onclick = () => {
         window.location = "/download-log/" + log.name;
+      };
+
+      row.querySelector(".log-download").onclick = () => {
+        window.location = "/download-log/" + log.name;
+      };
+
+      row.querySelector(".log-delete").onclick = () => {
+        openDeleteModal(log, platform, version, formattedDate, formattedTime);
       };
 
       list.appendChild(row);
@@ -595,3 +604,88 @@ async function loadLogs(){
     list.innerHTML = "Failed to load logs";
   }
 }
+function filterLogs(type){
+
+  const now = new Date();
+
+  const logs = document.querySelectorAll(".log-item");
+
+  logs.forEach(log => {
+
+    const time = new Date(Number(log.dataset.time));
+
+    let show = false;
+
+    switch(type){
+
+      case "1hr":
+        show = (now - time) <= 3600000;
+        break;
+
+      case "today":
+        show = now.toDateString() === time.toDateString();
+        break;
+
+      case "yesterday":
+        const y = new Date();
+        y.setDate(now.getDate()-1);
+        show = y.toDateString() === time.toDateString();
+        break;
+
+      case "week":
+        show = (now - time) <= 7*86400000;
+        break;
+
+      default:
+        show = true;
+    }
+
+    log.style.display = show ? "flex" : "none";
+
+  });
+}
+
+document.addEventListener("click",(e)=>{
+
+  if(!e.target.classList.contains("sort-btn")) return;
+
+  document.querySelectorAll(".sort-btn")
+    .forEach(b=>b.classList.remove("active"));
+
+  e.target.classList.add("active");
+
+  filterLogs(e.target.dataset.sort);
+
+});
+
+let logToDelete = null;
+
+function openDeleteModal(log, platform, version, date, time){
+
+  logToDelete = log.name;
+
+  document.getElementById("modalLogName").textContent =
+    `${platform} • ${version}`;
+
+  document.getElementById("modalLogMeta").textContent =
+    `Generated: ${date} ${time}`;
+
+  document.getElementById("deleteModal").classList.add("show");
+}
+
+document.getElementById("cancelDelete").onclick = () => {
+  document.getElementById("deleteModal").classList.remove("show");
+};
+
+document.getElementById("confirmDelete").onclick = async () => {
+
+  if(!logToDelete) return;
+
+  await fetch("/delete-log/" + logToDelete,{
+    method:"DELETE"
+  });
+
+  document.getElementById("deleteModal").classList.remove("show");
+
+  loadLogs();
+};

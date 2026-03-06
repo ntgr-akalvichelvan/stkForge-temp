@@ -1,9 +1,10 @@
 # Project title: stkForge
+# Project title: stkForge
 
 ## description: 
-   **Input:** "M4350---.stk" | "App_Mgr.tar.gz" | new-version
-    **Output:** "M4xxx----.stk"
-    **function:** Unpacks the Image file (.stk), swaps old app-mgr file with new app-mgr file and changes the version
+**Input:** "M4xxx---.stk" | "App_Mgr.tar.gz" | new-version
+**Output:** "M4xxx----.stk"
+**function:** Unpacks the Image file (.stk), swaps old app-mgr file with new app-mgr file and changes the version
               to give new Image file
 
    *Hosting in NUC -> swnuc04 (IP: 10.25.5.0)*
@@ -19,9 +20,14 @@
     8) python3-redis
     9) apt install device-tree-compiler (needed for dtc compilation)
 
-## Start Backend & Frontend Server
+## ## Start Backend & Frontend Server
+```bash```bash
+        gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app
+```
+**for Running the server in BackGround**
 ```bash
-    gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app
+    nohup gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app > gunicorn.log 2>&1 &
+```
 ```
 **for Running the server in BackGround**
 ```bash
