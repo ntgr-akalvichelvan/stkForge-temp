@@ -6,7 +6,7 @@ IMAGE=$3  #M4250H-v13.0.5.21.stk
 NEW_IMAGE_VER="$4" #"13.0.5.23"
 
 WORK_DIR=$5 				#/home/vspl007/Downloads/Management_switch_Package/ImagePacking
-SUP_DIR=/home/vspl007/Downloads/Management_switch_Package/ImagePacking #/home/swnuc04/arun/stkForge-temp/ImagePacking
+SUP_DIR=/home/swnuc04/arun/stkForge-temp/ImagePacking
 UTIL_DIR=$SUP_DIR/utilities		#/home/vspl007/Downloads/Management_switch_Package/ImagePacking/utilities
 BIN_DIR=$WORK_DIR	#$PLATFORM
 SIGN_DIR=$SUP_DIR/SigningKeys
