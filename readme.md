@@ -1,5 +1,4 @@
 # Project title: stkForge
-# Project title: stkForge
 
 ## description: 
 **Input:** "M4xxx---.stk" | "App_Mgr.tar.gz" | new-version
@@ -20,14 +19,9 @@
     8) python3-redis
     9) apt install device-tree-compiler (needed for dtc compilation)
 
-## ## Start Backend & Frontend Server
-```bash```bash
-        gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app
-```
-**for Running the server in BackGround**
+## Start Backend & Frontend Server
 ```bash
-    nohup gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app > gunicorn.log 2>&1 &
-```
+        gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app
 ```
 **for Running the server in BackGround**
 ```bash
