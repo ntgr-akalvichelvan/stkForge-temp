@@ -579,9 +579,28 @@ async function loadLogs(){
           </div>
       </div>
       <div class="log-actions">
-        <button class="log-view" title="View log">👁</button>
-        <button class="log-download" title="Download log">⬇</button>
-        <button class="log-delete" title="Delete log">🗑</button>
+        <button class="log-view" title="View log">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="white" stroke-width="2">
+            <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+        <button class="log-download" title="Download log">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" stroke-width="2.5">
+        <path d="M12 5v14"/>
+        <path d="M19 12l-7 7-7-7"/>
+        </svg>
+        </button>
+
+        <button class="log-delete" title="Delete log">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14H6L5 6"/>
+          <path d="M10 11v6"/>
+          <path d="M14 11v6"/>
+          <path d="M9 6V4h6v2"/>
+        </svg>
+      </button>
     </div>
     `;
 

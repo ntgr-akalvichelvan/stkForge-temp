@@ -7,7 +7,10 @@
               to give new Image file
 
    *Hosting in NUC -> swnuc04 (IP: 10.25.5.0)*
-    
+
+## Path in NUC:
+    `/home/swnuc04/arun/stkForge-temp/ImagePacking`
+
 ## dependecies:
     1) python3
     2) gunicorn

@@ -335,12 +335,77 @@ def view_log(filename):
     path = os.path.join(LOG_DIR, filename)
 
     if not os.path.exists(path):
-        return jsonify({"error": "Log not found"}), 404
+        return "Log not found", 404
 
-    return send_file(
-        path,
-        mimetype="text/plain"
-    )
+    with open(path, "r") as f:
+        content = f.read()
+
+    # parse metadata from filename
+    name = filename.replace(".log", "")
+    parts = name.split("_")
+
+    time = parts[-1]
+    date = parts[-2]
+    version = parts[-3]
+    platform = "_".join(parts[:-3])
+
+    formatted_date = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
+    formatted_time = f"{time[:2]}:{time[2:4]}:{time[4:6]}"
+
+    html = f"""
+    <html>
+    <head>
+    <title>STK Packaging Log</title>
+
+    <style>
+
+    body {{
+        font-family: system-ui;
+        margin:40px;
+        background:#0f172a;
+        color:#e2e8f0;
+    }}
+
+    h1 {{
+        margin-bottom:10px;
+    }}
+
+    .details {{
+        font-size:18px;
+        margin-bottom:25px;
+        line-height:1.6;
+    }}
+
+    .output {{
+        font-family: monospace;
+        font-size:14px;
+        white-space: pre-wrap;
+    }}
+
+    </style>
+
+    </head>
+
+    <body>
+
+    <h1>STK Packaging Log</h1>
+
+    <div class="details">
+    Platform: <b>{platform}</b><br>
+    Version: <b>{version}</b><br>
+    Generated: {formatted_date} {formatted_time}<br>
+    Log File: {filename}
+    </div>
+
+    <div class="output">
+{content}
+    </div>
+
+    </body>
+    </html>
+    """
+
+    return html
 
 @app.route("/delete-log/<filename>", methods=["DELETE"])
 def delete_log(filename):
