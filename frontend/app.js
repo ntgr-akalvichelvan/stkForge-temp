@@ -579,13 +579,18 @@ async function loadLogs(){
           </div>
       </div>
       <div class="log-actions">
-          <button class="log-download" title="Download log">⬇</button>
-          <button class="log-delete" title="Delete log">🗑</button>
-      </div>
+        <button class="log-view" title="View log">👁</button>
+        <button class="log-download" title="Download log">⬇</button>
+        <button class="log-delete" title="Delete log">🗑</button>
+    </div>
     `;
 
       row.querySelector("button").onclick = () => {
         window.location = "/download-log/" + log.name;
+      };
+
+      row.querySelector(".log-view").onclick = () => {
+        window.open("/view-log/" + log.name, "_blank");
       };
 
       row.querySelector(".log-download").onclick = () => {

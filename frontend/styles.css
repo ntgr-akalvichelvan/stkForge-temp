@@ -873,6 +873,31 @@ button {
 .log-delete:hover ~ *{
   border-color:initial;
 }
+
+.log-view{
+
+  width:38px;
+  height:38px;
+
+  border-radius:50%;
+  border:none;
+
+  background:#3b82f6;
+  color:white;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:18px;
+  cursor:pointer;
+}
+
+.log-view:hover{
+  transform:scale(1.05);
+  background:#2563eb;
+}
+
 /* ================= TOAST ================= */
 #toastContainer {
     position: fixed;

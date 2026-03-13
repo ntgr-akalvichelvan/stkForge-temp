@@ -8,6 +8,7 @@ import redis
 import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from werkzeug.utils import secure_filename
 
 from flask import Flask, request, jsonify, send_file, Response, stream_with_context
 from flask_cors import CORS
@@ -21,7 +22,7 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
 # CONFIG
 # =====================================================
 
-WORK_DIR = "/home/swnuc04/arun/stkForge-temp/ImagePacking"
+WORK_DIR = "/home/vspl007/Downloads/Management_switch_Package/ImagePacking"
 SCRIPT_PATH = os.path.join(WORK_DIR, "run_packaging.sh")
 JOBS_DIR = os.path.join(WORK_DIR, "jobs")
 
@@ -209,8 +210,12 @@ def generate():
     job_dir = os.path.join(JOBS_DIR, job_id)
     os.makedirs(job_dir, exist_ok=True)
 
-    stk_path = os.path.join(job_dir, stk_file.filename)
-    agent_path = os.path.join(job_dir, agent_file.filename)
+    # sanitize filenames
+    stk_filename = secure_filename(stk_file.filename).replace(" ", "_")
+    agent_filename = secure_filename(agent_file.filename).replace(" ", "_")
+
+    stk_path = os.path.join(job_dir, stk_filename)
+    agent_path = os.path.join(job_dir, agent_filename)
 
     stk_file.save(stk_path)
     agent_file.save(agent_path)
@@ -225,8 +230,8 @@ def generate():
 
     executor.submit(run_packaging, job_id, {
         "platform": ALLOWED_PLATFORMS[platform_ui],
-        "stk_file": stk_file.filename,
-        "agent_file": agent_file.filename,
+        "stk_file": stk_filename,
+        "agent_file": agent_filename,
         "new_version": new_version,
         "job_dir": job_dir
     })
@@ -322,6 +327,19 @@ def download_log(filename):
         path,
         as_attachment=True,
         download_name=filename
+    )
+
+@app.route("/view-log/<filename>")
+def view_log(filename):
+
+    path = os.path.join(LOG_DIR, filename)
+
+    if not os.path.exists(path):
+        return jsonify({"error": "Log not found"}), 404
+
+    return send_file(
+        path,
+        mimetype="text/plain"
     )
 
 @app.route("/delete-log/<filename>", methods=["DELETE"])

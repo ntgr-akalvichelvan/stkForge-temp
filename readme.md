@@ -27,3 +27,7 @@
 ```bash
     nohup gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app > gunicorn.log 2>&1 &
 ```
+
+## Minor bug fix and New feature
+
+Adding Ability to view logs without downloading
