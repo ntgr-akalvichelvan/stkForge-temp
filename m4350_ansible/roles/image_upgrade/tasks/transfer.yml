@@ -1,0 +1,44 @@
+- name: Transfer image to Netgear switch (sshpass + expect)
+  delegate_to: localhost
+  ansible.builtin.shell: |
+    /usr/bin/expect << 'EOF'
+    set timeout 900
+
+    spawn sshpass -p "{{ ansible_password }}" ssh -tt \
+      -o StrictHostKeyChecking=no \
+      -o UserKnownHostsFile=/dev/null \
+      -o PreferredAuthentications=password \
+      -o PubkeyAuthentication=no \
+      {{ ansible_user }}@{{ ansible_host }}
+
+    expect ">"
+    send "enable\r"
+
+    expect "#"
+    send "terminal length 0\r"
+
+    expect "#"
+    send "copy {{ image_method }}://{{ image_server_username }}@{{ image_server_host }}:{{ image_path }}/{{ image_file }} {{ boot_image }}\r"
+
+    expect "Remote Password:"
+    send "{{ image_server_password }}\r"
+
+    expect {
+      "overwrite the active image" {
+        send "y\r"
+        exp_continue
+      }
+      "Are you sure you want to start" {
+        send "y\r"
+      }
+    }
+
+    expect "#"
+    send "exit\r"
+    expect ">"
+    send "exit\r"
+    EOF
+  args:
+    executable: /bin/bash
+  register: transfer_out
+  changed_when: true

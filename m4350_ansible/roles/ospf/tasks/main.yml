@@ -1,0 +1,22 @@
+- name: Generate OSPF configuration
+  ansible.builtin.template:
+    src: ospf.j2
+    dest: /tmp/{{ inventory_hostname }}_ospf.cli
+    mode: "0600"
+  vars:
+    ospf: "{{ routing.ospf }}"
+  when: is_stack_master | default(true)
+
+- name: Apply OSPF configuration
+  ansible.builtin.shell: |
+    sshpass -p "{{ ansible_password }}" \
+    ssh -T \
+      -o StrictHostKeyChecking=no \
+      -o UserKnownHostsFile=/dev/null \
+      {{ ansible_user }}@{{ ansible_host }} \
+      < /tmp/{{ inventory_hostname }}_ospf.cli
+  vars:
+    ospf: "{{ routing.ospf }}"
+  when: is_stack_master | default(true)
+  no_log: true
+

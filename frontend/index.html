@@ -39,6 +39,7 @@
 <div class="tabs">
   <button class="tab-btn active" data-tab="tab1">STK Package</button>
   <button class="tab-btn" data-tab="tab2">Logs</button>
+  <button class="tab-btn" data-tab="tab3">Validation</button>
 </div>
 
 <!-- TAB CONTENT WRAPPER -->
@@ -143,12 +144,49 @@
   Loading logs...
 </div>
 </div>
+</div> <!-- tab2 end -->
+
+<!-- TAB 3: VALIDATION -->
+<div class="tab-content" id="tab3">
+  <div class="card">
+    <h2 class="validation-title">Validate STK Image</h2>
+
+    <!-- STK FILE UPLOAD -->
+    <div class="upload-card" id="validationStkBtn">
+      <div class="upload-icon">⬆</div>
+      <div class="upload-text">
+        <span class="primary" id="validationStkBtnText">Select STK File</span>
+      </div>
+      <span class="clear-btn" id="clearValidationStkBtn">✕</span>
+    </div>
+    <input type="file" id="validationStkInput" accept=".stk" hidden>
+
+    <!-- SWITCH CREDENTIALS -->
+    <div class="validation-divider"></div>
+    <label for="switchIp">Switch IP</label>
+    <input type="text" id="switchIp" placeholder="e.g. 192.168.1.1" autocomplete="off">
+
+    <label for="switchUsername">Switch Username</label>
+    <input type="text" id="switchUsername" placeholder="Admin" autocomplete="off">
+
+    <label for="switchPassword">Switch Password</label>
+    <input type="password" id="switchPassword" placeholder="Enter password" autocomplete="new-password">
+
+    <label for="expectedAppMgrVersion">Expected App-Mgr Version</label>
+    <input type="text" id="expectedAppMgrVersion" placeholder="eg. 1.0.5.32" autocomplete="off">
+
+    <button type="button" id="validateBtn" class="btn-validate" disabled>
+      <span class="btn-validate-text">Validate</span>
+      <span class="btn-validate-spinner"></span>
+    </button>
+
+    <div id="validationResult" class="validation-result"></div>
+  </div>
 </div>
-<div class="footer">
-  The generated package will be downloaded to your default downloads folder
 </div>
 <div class="app-footer">
-© 2026 NETGEAR · Designed by Switch Development Team
+  <div class="footer-download-msg">The generated package will be downloaded to your default downloads folder</div>
+  <div class="footer-copyright">© 2026 NETGEAR · Designed by Switch Development Team</div>
 </div>
 
   <div id="toastContainer"></div>

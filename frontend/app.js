@@ -27,6 +27,17 @@ const btnPercent = document.querySelector(".btn-percent");
 
 let jobRunning = false;
 
+/* ---------- VALIDATION TAB ELEMENTS (may be null if tab not in DOM) ---------- */
+const validationStkInput = document.getElementById("validationStkInput");
+const validationStkBtn = document.getElementById("validationStkBtn");
+const validationStkBtnText = document.getElementById("validationStkBtnText");
+const clearValidationStkBtn = document.getElementById("clearValidationStkBtn");
+const validateBtn = document.getElementById("validateBtn");
+const switchIp = document.getElementById("switchIp");
+const switchUsername = document.getElementById("switchUsername");
+const switchPassword = document.getElementById("switchPassword");
+const expectedAppMgrVersion = document.getElementById("expectedAppMgrVersion");
+const validationResult = document.getElementById("validationResult");
 
 /* ================= TAB SWITCHING ================= */
 
@@ -35,6 +46,8 @@ const tabContents = document.querySelectorAll(".tab-content");
 
 tabButtons.forEach(btn => {
   btn.addEventListener("click", () => {
+    const tabId = btn.getAttribute("data-tab");
+    if (!tabId) return;
 
     // Remove active from all buttons
     tabButtons.forEach(b => b.classList.remove("active"));
@@ -43,13 +56,13 @@ tabButtons.forEach(btn => {
     // Hide all content
     tabContents.forEach(c => c.classList.remove("active"));
 
-    // Show selected
-    const target = document.getElementById(btn.dataset.tab);
-    if (btn.dataset.tab === "tab2") {
-    loadLogs();
-    }
+    // Show selected tab content
+    const target = document.getElementById(tabId);
     if (target) {
       target.classList.add("active");
+    }
+    if (tabId === "tab2") {
+      loadLogs();
     }
   });
 });
@@ -713,3 +726,114 @@ document.getElementById("confirmDelete").onclick = async () => {
 
   loadLogs();
 };
+
+/* ================= VALIDATION TAB ================= */
+
+function updateValidationButtonStates() {
+  if (!validationStkInput || !validateBtn || !switchIp || !switchUsername || !switchPassword) return;
+  const hasFile = validationStkInput.files.length > 0;
+  const canValidate = hasFile &&
+    switchIp.value.trim() &&
+    switchUsername.value.trim() &&
+    switchPassword.value.trim();
+  validateBtn.disabled = !canValidate;
+  if (canValidate) validateBtn.classList.add("enabled");
+  else validateBtn.classList.remove("enabled");
+}
+
+function initValidationTab() {
+  if (!validationStkBtn || !validationStkInput || !validateBtn ||
+      !validationResult || !switchIp || !switchUsername || !switchPassword || !expectedAppMgrVersion) return;
+
+  validationStkBtn.onclick = () => {
+    if (validationStkInput.files.length) {
+      validationStkInput.value = "";
+      if (validationStkBtnText) validationStkBtnText.textContent = "Select STK File";
+      const icon = validationStkBtn.querySelector(".upload-icon");
+      if (icon) icon.textContent = "⬆";
+      validationStkBtn.classList.remove("has-file");
+      updateValidationButtonStates();
+    } else {
+      validationStkInput.click();
+    }
+  };
+
+  if (clearValidationStkBtn) {
+    clearValidationStkBtn.onclick = (e) => {
+      e.stopPropagation();
+      validationStkInput.value = "";
+      if (validationStkBtnText) validationStkBtnText.textContent = "Select STK File";
+      const icon = validationStkBtn.querySelector(".upload-icon");
+      if (icon) icon.textContent = "⬆";
+      validationStkBtn.classList.remove("has-file");
+      updateValidationButtonStates();
+    };
+  }
+
+  validationStkInput.addEventListener("change", () => {
+    const file = validationStkInput.files[0];
+    if (!file) return;
+    if (validationStkBtnText) validationStkBtnText.textContent = file.name;
+    validationStkBtn.classList.add("has-file");
+    const icon = validationStkBtn.querySelector(".upload-icon");
+    if (icon) icon.textContent = "✕";
+    updateValidationButtonStates();
+  });
+
+  switchIp.addEventListener("input", updateValidationButtonStates);
+  switchUsername.addEventListener("input", updateValidationButtonStates);
+  switchPassword.addEventListener("input", updateValidationButtonStates);
+  if (expectedAppMgrVersion) expectedAppMgrVersion.addEventListener("input", updateValidationButtonStates);
+
+  validateBtn.onclick = async () => {
+    const file = validationStkInput.files[0];
+    if (!file || !switchIp.value.trim() || !switchUsername.value.trim() || !switchPassword.value.trim()) {
+      showToast("Select STK file and fill switch credentials", "error");
+      return;
+    }
+    if (validateBtn.classList.contains("running")) return;
+    validateBtn.classList.add("running");
+    validateBtn.disabled = true;
+    if (validationResult) {
+      validationResult.textContent = "Validating...";
+      validationResult.className = "validation-result validation-result-pending";
+    }
+    const formData = new FormData();
+    formData.append("stkFile", file);
+    formData.append("switch_ip", switchIp.value.trim());
+    formData.append("switch_username", switchUsername.value.trim());
+    formData.append("switch_password", switchPassword.value.trim());
+    formData.append("expected_app_mgr_version", (expectedAppMgrVersion && expectedAppMgrVersion.value) ? expectedAppMgrVersion.value.trim() : "");
+    try {
+      const response = await fetch("/validate", {
+        method: "POST",
+        body: formData
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.success !== false) {
+        if (validationResult) {
+          validationResult.textContent = data.message || "Validation completed successfully.";
+          validationResult.className = "validation-result validation-result-success";
+        }
+        showToast(data.message || "Validation completed", "success");
+      } else {
+        if (validationResult) {
+          validationResult.textContent = data.message || "Validation failed.";
+          validationResult.className = "validation-result validation-result-error";
+        }
+        showToast(data.message || "Validation failed", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      if (validationResult) {
+        validationResult.textContent = "Validation request failed (connection error).";
+        validationResult.className = "validation-result validation-result-error";
+      }
+      showToast("Failed to connect to backend", "error");
+    }
+    validateBtn.classList.remove("running");
+    updateValidationButtonStates();
+  };
+}
+
+initValidationTab();

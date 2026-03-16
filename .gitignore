@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 logs/
+# Validation tab uploaded STK files
+validation_stk_uploads/

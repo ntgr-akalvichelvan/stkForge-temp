@@ -1,0 +1,10 @@
+enable
+vlan database
+{% for vlan in vlans %}
+vlan {{ vlan.id }}
+vlan name {{ vlan.id }} {{ vlan.name }}
+{% endfor %}
+exit
+write memory
+y
+logout

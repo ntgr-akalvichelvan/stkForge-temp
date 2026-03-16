@@ -1,0 +1,17 @@
+- name: Configure VLANs
+  ansible.builtin.template:
+    src: vlan.j2
+    dest: /tmp/{{ inventory_hostname }}_vlan.cli
+    mode: "0600"
+  when: is_stack_master | default(true)
+
+- name: Apply VLAN configuration
+  ansible.builtin.shell: |
+    sshpass -p "{{ ansible_password }}" \
+    ssh -T \
+        -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile=/dev/null \
+        {{ ansible_user }}@{{ ansible_host }} \
+        < /tmp/{{ inventory_hostname }}_vlan.cli
+  when: is_stack_master | default(true)
+

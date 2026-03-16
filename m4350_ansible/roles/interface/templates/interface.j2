@@ -1,0 +1,21 @@
+enable
+configure
+{% for intf in interfaces %}
+interface {{ intf.name }}
+{% if intf.description is defined %}
+description {{ intf.description }}
+{% endif %}
+{% if intf.mode is defined %}
+switchport mode {{ intf.mode }}
+{% endif %}
+{% if intf.vlan is defined %}
+switchport access vlan {{ intf.vlan }}
+{% endif %}
+no shutdown
+exit
+{% endfor %}
+exit
+write memory
+y
+logout
+

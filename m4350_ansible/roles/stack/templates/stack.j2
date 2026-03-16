@@ -1,0 +1,22 @@
+#jinja2: trim_blocks: True, lstrip_blocks: True
+{#####################################################
+Purpose:
+Configure Netgear M4350 stacking:
+- stack members
+- member priority
+- stack ports
+#####################################################}
+enable
+configure
+no port-channel auto
+switch 1 priority {{ stack.priority }}
+stack
+{% for port in stack.ports %}
+stack-port {{ port }} stack
+{% endfor %}
+
+exit
+exit
+write memory
+logout
+

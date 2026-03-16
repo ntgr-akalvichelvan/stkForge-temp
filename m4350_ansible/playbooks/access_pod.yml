@@ -1,0 +1,20 @@
+---
+###############################################################################
+# NETGEAR M4350 – ACCESS POD L2 CONFIGURATION
+# Purpose:
+#   - Configure VLANs on Access stack
+#   - Configure end-device access ports
+#   - Configure uplink LAG as L2 trunk
+###############################################################################
+
+- name: Configure Access Pod (L2 only)
+  hosts: access_pods
+  gather_facts: no
+  connection: local
+  vars_files:
+    - ../group_vars/m4350_stack/vault.yml
+
+  roles:
+    - vlan            # Create VLANs
+    - interface       # Switchport configuration - access and trunk
+    - lag             # Configure L2 LAG on the uplinks

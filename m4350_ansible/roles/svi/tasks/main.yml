@@ -1,0 +1,17 @@
+- name: Generate SVI configuration
+  ansible.builtin.template:
+    src: svi.j2
+    dest: /tmp/{{ inventory_hostname }}_svi.cli
+    mode: "0600"
+  when: is_stack_master | default(true)
+
+- name: Apply SVI configuration
+  ansible.builtin.shell: |
+    sshpass -p "{{ ansible_password }}" \
+    ssh -T \
+      -o StrictHostKeyChecking=no \
+      -o UserKnownHostsFile=/dev/null \
+      {{ ansible_user }}@{{ ansible_host }} \
+      < /tmp/{{ inventory_hostname }}_svi.cli
+  when: is_stack_master | default(true)
+

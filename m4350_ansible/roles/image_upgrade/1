@@ -1,0 +1,52 @@
+sshpass -p "{{ ansible_password }}" ssh -tt \
+-o StrictHostKeyChecking=no \
+-o UserKnownHostsFile=/dev/null \
+-o PreferredAuthentications=password \
+-o PubkeyAuthentication=no \
+{{ ansible_user }}@{{ ansible_host }} << 'EOF'
+
+enable
+
+{% if netgear_stack | default(false) %}
+show stack-status
+{% endif %}
+
+show version
+
+!
+! =========================
+! IMAGE TRANSFER
+! =========================
+!
+
+{% if image.method == "scp" %}
+copy scp image {{ image.server }} {{ image.path }}/{{ image.filename }}
+{% elif image.method == "sftp" %}
+copy sftp image {{ image.server }} {{ image.path }}/{{ image.filename }}
+{% elif image.method == "tftp" %}
+copy tftp image {{ image.server }} {{ image.filename }}
+{% else %}
+echo "Unsupported transfer method"
+exit
+{% endif %}
+
+!
+! =========================
+! INSTALL IMAGE
+! =========================
+!
+
+boot system image {{ image.filename }}
+
+write memory
+
+!
+! =========================
+! REBOOT
+! =========================
+!
+
+reload
+y
+
+EOF

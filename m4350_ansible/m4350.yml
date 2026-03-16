@@ -1,0 +1,10 @@
+image_method: scp
+image_file: M4350-v14.0.6.17.stk
+image_path: /home/swnuc01/arun/images
+boot_image: image2
+image_server_host: 10.216.202.82
+image_server_username: swnuc01
+image_server_password: switch@123
+application:
+  name: appmgr
+  expected_version: "1.0.5.27"

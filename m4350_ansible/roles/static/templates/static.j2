@@ -1,0 +1,32 @@
+x#jinja2: trim_blocks: True, lstrip_blocks: True
+{#####################################################
+Purpose:
+Configure static and default routing on Netgear M4350
+
+routing:
+  static_routes:
+    - prefix: 0.0.0.0/0
+      next_hop: 192.168.101.1
+      distance: 1
+      state: present
+#####################################################}
+
+{% if routing is defined and routing.static_routes is defined %}
+{% for route in routing.static_routes %}
+{% if route.state | default('present') == 'present' %}
+ip route {{ route.prefix }} {{ route.next_hop }}{% if route.distance is defined %} {{ route.distance }}{% endif %}
+{% else %}
+no ip route {{ route.prefix }} {{ route.next_hop }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
+{% if routing is defined and routing.ipv6_static_routes is defined %}
+{% for route in routing.ipv6_static_routes %}
+{% if route.state | default('present') == 'present' %}
+ipv6 route {{ route.prefix }} {{ route.next_hop }}
+{% else %}
+no ipv6 route {{ route.prefix }} {{ route.next_hop }}
+{% endif %}
+{% endfor %}
+{% endif %}

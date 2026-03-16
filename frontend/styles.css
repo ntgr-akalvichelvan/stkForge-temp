@@ -14,7 +14,7 @@ body {
   background: #f5f7fa;
   color: #0f172a;
 
-  padding-bottom: 70px; /* space for fixed footer */
+  padding-bottom: 85px; /* space for fixed footer (two lines) */
 }
 
 /* ================= HEADER ================= */
@@ -101,14 +101,18 @@ body {
 
 /* ================= APP WRAPPER ================= */
 .app-wrapper {
-  flex: 1;                 
+  flex: 1;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
   padding: 20px 0;
 }
 
 .app {
-  width: 720px;
+  width: 100%;
+  max-width: 720px;
 }
 
 /* ================= TITLES ================= */
@@ -368,7 +372,9 @@ input[type="file"] {
 
 /* ================= INPUTS ================= */
 /* ========== INPUTS ========== */
-input[type="text"], select {
+input[type="text"],
+input[type="password"],
+select {
     width: 100%;
     padding: 14px 16px;
     border-radius: 8px;
@@ -376,7 +382,7 @@ input[type="text"], select {
     font-size: 16px;
     font-weight: 500;
     margin-bottom: 22px;
-    transition: border-color 0.2s ease; /* Add transition for smooth color change */
+    transition: border-color 0.2s ease;
 }
 
 .version-error { 
@@ -593,26 +599,30 @@ button {
 
 
 /* ================= FOOTERS ================= */
-.footer {
-  text-align: center;
-  font-size: 13px;
-  color: #64748b;
-  margin-top: 16px;
-}
-
 .app-footer {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-
   background: #1f2a37;
   color: #cbd5e1;
   text-align: center;
-  padding: 18px;
+  padding: 14px 18px;
   font-size: 14px;
-
   z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-download-msg {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.footer-copyright {
+  font-size: 14px;
+  color: #cbd5e1;
 }
 
 /* ================= LOG LIST ================= */
@@ -962,4 +972,157 @@ button {
 @keyframes slideIn {
     from { transform: translateX(120%); }
     to { transform: translateX(0); }
+}
+
+/* ================= VALIDATION TAB ================= */
+.validation-title {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.validation-desc {
+  margin: 0 0 22px 0;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  border: 2px solid #0ea5a4;
+  background: #ffffff;
+  color: #0ea5a4;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-bottom: 22px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #ecfeff;
+  border-color: #0d9488;
+  color: #0d9488;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.validation-status {
+  font-size: 14px;
+  margin-top: -12px;
+  margin-bottom: 18px;
+  min-height: 20px;
+}
+
+.validation-status-pending {
+  color: #64748b;
+}
+
+.validation-status-success {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.validation-status-error {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.validation-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 24px 0 22px 0;
+}
+
+#tab3 label {
+  margin-top: 0;
+}
+
+#tab3 .btn-validate {
+  position: relative;
+  margin-top: 8px;
+  background: linear-gradient(135deg, #0ea5a4, #22c55e);
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+#tab3 .btn-validate:disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+#tab3 .btn-validate.enabled:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(14, 165, 164, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-validate-spinner {
+  display: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: validationSpinner 0.8s linear infinite;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+#tab3 .btn-validate.running .btn-validate-text {
+  opacity: 0.85;
+}
+
+#tab3 .btn-validate.running .btn-validate-spinner {
+  display: inline-block;
+}
+
+@keyframes validationSpinner {
+  to { transform: rotate(360deg); }
+}
+
+.validation-result {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  min-height: 24px;
+}
+
+.validation-result:empty {
+  display: none;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+
+.validation-result-pending {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.validation-result-success {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.validation-result-error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
 }

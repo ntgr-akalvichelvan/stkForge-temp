@@ -1,0 +1,13 @@
+- name: Show stack
+  ansible.builtin.raw: "show stack"
+  register: stack_out
+
+- name: Show version
+  ansible.builtin.raw: "show version"
+  register: ver_out
+
+- debug:
+    var: stack_out.stdout
+
+- debug:
+    var: ver_out.stdout

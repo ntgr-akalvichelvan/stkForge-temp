@@ -1,0 +1,8 @@
+configure
+stack
+{% for port in stack.ports %}
+no stack-port {{ port }}
+{% endfor %}
+exit
+write memory
+exit

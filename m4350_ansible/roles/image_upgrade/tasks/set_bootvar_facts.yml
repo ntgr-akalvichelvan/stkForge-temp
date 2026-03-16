@@ -1,0 +1,10 @@
+---
+# --------------------------------------------------
+# SET BOOTVAR FACTS
+# --------------------------------------------------
+- name: Set Netgear bootvar facts
+  set_fact:
+    netgear_current_active_image: "{{ bootvar_row[0] | default('UNKNOWN') }}"
+    netgear_next_active_image: "{{ bootvar_row[1] | default('UNKNOWN') }}"
+  when:
+    - not stack.enabled or is_stack_master

@@ -34,3 +34,9 @@
 ## Minor bug fix and New feature
 
 Adding Ability to view logs without downloading
+
+## Ansible -> validation
+
+Adding UI and Ansible script to validate the image script for detecting app-mgr version
+
+m4350_ansible folder is added.

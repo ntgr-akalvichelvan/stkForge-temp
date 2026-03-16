@@ -1,0 +1,17 @@
+- name: Render LAG configuration
+  ansible.builtin.template:
+    src: lag.j2
+    dest: /tmp/{{ inventory_hostname }}_lag.cli
+    mode: "0600"
+  when: is_stack_master | default(true)
+
+- name: Apply LAG configuration
+  ansible.builtin.shell: |
+    sshpass -p "{{ ansible_password }}" \
+    ssh -T \
+        -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile=/dev/null \
+        {{ ansible_user }}@{{ ansible_host }} \
+        < /tmp/{{ inventory_hostname }}_lag.cli
+  when: is_stack_master | default(true)
+

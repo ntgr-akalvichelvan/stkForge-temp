@@ -1,0 +1,21 @@
+---
+# --------------------------------------------------
+# COLLECT BOOT VARIABLES
+# --------------------------------------------------
+- name: Collect boot variables (show bootvar)
+  delegate_to: localhost
+  ansible.builtin.shell: |
+    printf "enable\nterminal length 0\nshow bootvar\nexit\n" | \
+    sshpass -p "{{ ansible_password }}" \
+    ssh -tt \
+    -o StrictHostKeyChecking=no \
+    -o UserKnownHostsFile=/dev/null \
+    {{ ansible_user }}@{{ ansible_host }}
+  args:
+    executable: /bin/bash
+  register: bootvar_out
+  changed_when: false
+
+- name: Show raw bootvar output (debug)
+  debug:
+    var: bootvar_out.stdout

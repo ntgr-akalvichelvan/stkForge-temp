@@ -1,0 +1,10 @@
+image_method: scp
+image_file: M4300-V13.0.5.24.stk 
+image_path: /root/projects/images
+boot_image: image2
+image_server_host:  10.216.202.75
+image_server_username: root
+image_server_password: Ntgr@123
+application:
+  name: appmgr
+  expected_version: "1.0.5.2"

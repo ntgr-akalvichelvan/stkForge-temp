@@ -1,0 +1,11 @@
+image:
+  image_method: sftp        # scp | sftp | tftp
+  image_path:  /root/projects/images
+  server: 10.216.202.75
+  username: root
+  password: Ntgr@123
+  filename: M4350-v14.0.6.13.stk
+  boot_image: image2
+  reboot: true 
+  target_slot: image2
+

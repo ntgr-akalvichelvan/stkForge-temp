@@ -1,0 +1,25 @@
+enable
+configure
+{% for lag in lags %}
+
+{# --- Add member interfaces to the LAG --- #}
+{% for port in lag.members %}
+interface {{ port }}
+ addport lag {{ lag.id }}
+ exit
+{% endfor %}
+
+{# --- Configure the LAG as trunk --- #}
+interface lag {{ lag.id }}
+ switchport mode trunk
+{% if lag.trunk_allowed_vlans is defined %}
+ switchport trunk allowed vlan {{ lag.trunk_allowed_vlans | join(',') }}
+{% endif %}
+ exit
+
+{% endfor %}
+exit
+write memory
+y
+logout
+

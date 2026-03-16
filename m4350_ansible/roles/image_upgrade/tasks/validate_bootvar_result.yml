@@ -1,0 +1,9 @@
+- name: Validate next-active image slot
+  fail:
+    msg: >
+      Bootvar validation failed!
+      Expected next-active = {{ image.target_slot }}
+      but found {{ netgear_next_active | default('EMPTY') }}.
+  when:
+    - netgear_next_active == ''
+      or netgear_next_active != image.target_slot

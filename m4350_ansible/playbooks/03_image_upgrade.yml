@@ -1,0 +1,12 @@
+---
+- name: Netgear M4350 / M4300 Image Upgrade
+  hosts: netgear
+  gather_facts: no
+  connection: local
+
+  vars_files:
+    - "../vars/{{ platform }}.yml"
+
+  roles:
+    - image_upgrade
+    - validate

@@ -1,0 +1,54 @@
+---
+###############################################################################
+# NETGEAR M4350 – STACK + L2/L3 CONFIGURATION
+###############################################################################
+
+- name: Build stack and reboot all members
+  hosts: m4350_stack
+  gather_facts: no
+  connection: local
+
+  vars_files:
+    - ../group_vars/m4350_stack/main.yml
+    - ../group_vars/m4350_stack/vault.yml
+
+  roles:
+    - role: stack
+      when: stack.enabled | bool
+
+
+###############################################################################
+# MASTER-ONLY CONFIGURATION
+###############################################################################
+
+- name: Configure VLAN, LAG, SVI, DHCP, OSPF on master node
+  hosts: m4350_master
+  gather_facts: no
+  connection: local
+
+  vars_files:
+    - ../group_vars/m4350_stack/main.yml
+    - ../group_vars/m4350_stack/vault.yml
+
+  roles:
+    - vlan
+    - lag
+    - svi
+    - dhcp
+    - ospf
+
+
+###############################################################################
+# VALIDATION
+###############################################################################
+
+- name: Validate stack and routing
+  hosts: m4350_master
+  gather_facts: no
+  connection: local
+
+  vars_files:
+    - ../group_vars/m4350_stack/vault.yml
+
+  roles:
+    - validate

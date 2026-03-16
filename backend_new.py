@@ -25,10 +25,14 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
 WORK_DIR = "/home/vspl007/Downloads/Management_switch_Package/ImagePacking"
 SCRIPT_PATH = os.path.join(WORK_DIR, "run_packaging.sh")
 JOBS_DIR = os.path.join(WORK_DIR, "jobs")
-
 LOG_DIR = os.path.join(WORK_DIR, "logs")
 
+# Dedicated directory for STK files uploaded via Validation tab (single-user).
+# Full path to saved file is passed to Ansible playbook for sending image to switch.
+VALIDATION_STK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "validation_stk_uploads")
+
 os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs(VALIDATION_STK_DIR, exist_ok=True)
 os.makedirs(JOBS_DIR, exist_ok=True)
 
 ALLOWED_PLATFORMS = {
@@ -406,6 +410,62 @@ def view_log(filename):
     """
 
     return html
+
+# -----------------------------------------------------
+# Validation tab: upload STK (legacy endpoint; Validate button uses /validate)
+# -----------------------------------------------------
+@app.route("/upload-validation-stk", methods=["POST"])
+def upload_validation_stk():
+    stk_file = request.files.get("stkFile")
+    if not stk_file or not stk_file.filename or not stk_file.filename.lower().endswith(".stk"):
+        return jsonify({"success": False, "message": "No valid STK file provided"}), 400
+    filename = secure_filename(stk_file.filename).replace(" ", "_")
+    dest_path = os.path.join(VALIDATION_STK_DIR, filename)
+    stk_file.save(dest_path)
+    return jsonify({"success": True, "message": "STK file uploaded", "filename": filename})
+
+
+# -----------------------------------------------------
+# Validation tab: receive STK + credentials, save STK, run Ansible (stub)
+# All validation STK uploads go to VALIDATION_STK_DIR (single-user).
+# Ansible playbook can use stk_file_path to send image to switch.
+# -----------------------------------------------------
+@app.route("/validate", methods=["POST"])
+def validate():
+    # Accept multipart/form-data: stkFile + switch_ip, switch_username, switch_password, expected_app_mgr_version
+    stk_file = request.files.get("stkFile")
+    switch_ip = (request.form.get("switch_ip") or "").strip()
+    switch_username = (request.form.get("switch_username") or "").strip()
+    switch_password = request.form.get("switch_password") or ""
+    expected_app_mgr_version = (request.form.get("expected_app_mgr_version") or "").strip()
+    if not stk_file or not stk_file.filename or not stk_file.filename.lower().endswith(".stk"):
+        return jsonify({"success": False, "message": "Valid STK file is required"}), 400
+    if not switch_ip or not switch_username:
+        return jsonify({"success": False, "message": "Switch IP and username are required"}), 400
+
+    filename = secure_filename(stk_file.filename).replace(" ", "_")
+    dest_path = os.path.join(VALIDATION_STK_DIR, filename)
+    stk_file.save(dest_path)
+
+    # Print received details to command line (for verification)
+    print("-" * 50)
+    print("[Validate] Received from frontend:")
+    print("  STK file name :", filename)
+    print("  Saved to      :", dest_path)
+    print("  Switch IP     :", switch_ip)
+    print("  Switch user   :", switch_username)
+    print("  Switch pass   :", "***" if switch_password else "(empty)")
+    print("  App-Mgr ver   :", expected_app_mgr_version or "(not set)")
+    print("-" * 50)
+
+    # dest_path, expected_app_mgr_version: pass to Ansible playbook
+    # TODO: run Ansible playbook with dest_path, switch_ip, switch_username, switch_password, expected_app_mgr_version
+    return jsonify({
+        "success": True,
+        "message": "Validation completed successfully (stub — add Ansible playbook)",
+        "stk_file_path": dest_path,
+    })
+
 
 @app.route("/delete-log/<filename>", methods=["DELETE"])
 def delete_log(filename):

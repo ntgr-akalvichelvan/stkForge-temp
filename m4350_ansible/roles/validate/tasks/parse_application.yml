@@ -1,0 +1,19 @@
+- name: Extract application version
+  set_fact:
+    netgear_app_version: >-
+      {{
+        (
+          application_out.stdout
+          | regex_findall(
+              '^' ~ application.name ~ '\\s+\\S+\\s+\\S+\\s+\\S+\\s+\\S+\\s+\\S+\\s+(\\S+)',
+              multiline=True
+            )
+          | first
+        ) | default('UNKNOWN')
+      }}
+
+- name: Debug detected application version
+  debug:
+    msg:
+      - "Application: {{ application.name }}"
+      - "Detected version: {{ netgear_app_version }}"

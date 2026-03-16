@@ -1,0 +1,21 @@
+---
+- name: Render routing configuration
+  ansible.builtin.template:
+    src: routing.j2
+    dest: /tmp/routing.cfg
+  delegate_to: localhost
+
+- name: Apply routing configuration on master
+  ansible.builtin.shell: |
+    sshpass -p "{{ vault_switch_password }}" \
+    ssh -T \
+    -o StrictHostKeyChecking=no \
+    -o UserKnownHostsFile=/dev/null \
+    {{ ansible_user }}@{{ ansible_host }} << 'EOF'
+    enable
+    configure
+    {% raw %}{{ lookup('file', '/tmp/routing.cfg') }}{% endraw %}
+    exit
+    write memory
+    EOF
+  when: routing.enabled | bool

@@ -1,0 +1,29 @@
+- name: Show version on all switches
+  hosts: network_devices
+  gather_facts: no
+  connection: local
+
+  vars_files:
+    - ../group_vars/m4350_stack/vault.yml
+
+  tasks:
+    - name: Run show version (non-interactive, stable)
+      ansible.builtin.shell: |
+        sshpass -p "{{ vault_switch_password }}" \
+        ssh -T \
+        -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile=/dev/null \
+        -o PreferredAuthentications=password \
+        -o PubkeyAuthentication=no \
+        {{ ansible_user }}@{{ ansible_host }} << 'EOF'
+        enable
+        show version
+        exit
+        EOF
+      register: version_out
+      changed_when: false
+      timeout: 30
+
+    - name: Print output
+      debug:
+        var: version_out.stdout
