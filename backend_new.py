@@ -28,8 +28,15 @@ JOBS_DIR = os.path.join(WORK_DIR, "jobs")
 LOG_DIR = os.path.join(WORK_DIR, "logs")
 
 # Dedicated directory for STK files uploaded via Validation tab (single-user).
-# Full path to saved file is passed to Ansible playbook for sending image to switch.
 VALIDATION_STK_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "validation_stk_uploads")
+
+# m4350_ansible: update vars + inventory from Validation tab, then run image upgrade playbook
+PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
+M4350_ANSIBLE_DIR = os.path.join(PACKAGE_DIR, "m4350_ansible")
+M4350_INVENTORY_FILE = os.path.join(M4350_ANSIBLE_DIR, "inventory", "hosts.yml")
+
+# Allowed Ansible vars filenames (frontend sends lowercase: m4350, m4300, m4250H, m4250L)
+VALIDATION_PLATFORM_VARS = ("m4350", "m4300", "m4250H", "m4250L")
 
 os.makedirs(LOG_DIR, exist_ok=True)
 os.makedirs(VALIDATION_STK_DIR, exist_ok=True)
@@ -426,9 +433,130 @@ def upload_validation_stk():
 
 
 # -----------------------------------------------------
-# Validation tab: receive STK + credentials, save STK, run Ansible (stub)
-# All validation STK uploads go to VALIDATION_STK_DIR (single-user).
-# Ansible playbook can use stk_file_path to send image to switch.
+# Ansible: update vars and inventory from Validation inputs, run playbook
+# -----------------------------------------------------
+def _get_vars_path(platform_vars_name):
+    """Path to vars file e.g. m4350.yml, m4300.yml, m4250H.yml."""
+    return os.path.join(M4350_ANSIBLE_DIR, "vars", platform_vars_name + ".yml")
+
+
+def _update_platform_vars(vars_path, image_file, image_path, expected_app_mgr_version):
+    """Update given vars file with image_file, image_path, expected_version."""
+    with open(vars_path, "r") as f:
+        content = f.read()
+    content = re.sub(r"^image_file:\s*.+$", "image_file: %s" % image_file, content, flags=re.MULTILINE)
+    content = re.sub(r"^image_path:\s*.+$", "image_path: %s" % image_path, content, flags=re.MULTILINE)
+    content = re.sub(
+        r"^(\s*expected_version:\s*)[\"'].*?[\"']",
+        r'\g<1>"%s"' % expected_app_mgr_version.replace("\\", "\\\\").replace('"', '\\"'),
+        content,
+        flags=re.MULTILINE,
+    )
+    with open(vars_path, "w") as f:
+        f.write(content)
+
+
+def _update_m4350_inventory(switch_ip, switch_username, switch_password):
+    """Update m4350_ansible/inventory/hosts.yml with switch connection details."""
+    with open(M4350_INVENTORY_FILE, "r") as f:
+        content = f.read()
+    content = re.sub(r"^(\s*ansible_host:\s*).+$", r"\g<1>%s" % switch_ip, content, flags=re.MULTILINE)
+    content = re.sub(r"^(\s*ansible_user:\s*).+$", r"\g<1>%s" % switch_username, content, flags=re.MULTILINE)
+    # Quote password for YAML in case of special chars
+    pw_escaped = switch_password.replace("\\", "\\\\").replace('"', '\\"')
+    content = re.sub(r"^(\s*ansible_password:\s*).+$", r'\g<1>"%s"' % pw_escaped, content, flags=re.MULTILINE)
+    with open(M4350_INVENTORY_FILE, "w") as f:
+        f.write(content)
+
+
+def _run_ansible_playbook(platform_extra_var):
+    """Run ansible-playbook from m4350_ansible dir. platform_extra_var e.g. m4350 for vars/{{ platform }}.yml."""
+    cmd = [
+        "ansible-playbook",
+        "-i", "inventory/hosts.yml",
+        "playbooks/03_image_upgrade.yml",
+        "-e", "platform=%s" % platform_extra_var,
+        "-vv",
+    ]
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=M4350_ANSIBLE_DIR,
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+        out = (result.stdout or "") + (result.stderr or "")
+        if result.returncode != 0:
+            return False, out
+        return True, out
+    except subprocess.TimeoutExpired:
+        return False, "Ansible playbook timed out."
+    except FileNotFoundError:
+        return False, "ansible-playbook not found. Ensure Ansible is installed and on PATH."
+    except Exception as e:
+        return False, str(e)
+
+
+VALIDATION_STREAM_RESULT_MARKER = "\n---RESULT---\n"
+
+
+VALIDATION_LOG_HEADER = (
+    "\n"
+    "===============================================================================\n"
+    "  VALIDATION TAB LOG  (Ansible image upgrade / application table)\n"
+    "===============================================================================\n\n"
+)
+
+
+def _write_validation_log(full_output):
+    """Write full command output to a log file in LOG_DIR with validation tag. Returns log filename."""
+    os.makedirs(LOG_DIR, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_filename = "validation_%s.log" % timestamp
+    log_path = os.path.join(LOG_DIR, log_filename)
+    with open(log_path, "w") as f:
+        f.write(VALIDATION_LOG_HEADER)
+        f.write(full_output)
+    return log_filename
+
+
+def _parse_application_table_and_version(full_output):
+    """
+    Parse ansible output for the 'show application' table and appmgr version.
+    Returns (table_text, appmgr_version).
+    Table format:
+        Name             StartOnBoot AutoRestart ... Version
+        ---------------- ----------- ----------- ...
+        appmgr           Yes         Yes         ... 1.0.5.37
+    """
+    table_text = ""
+    appmgr_version = ""
+    lines = full_output.split("\n")
+    for i, line in enumerate(lines):
+        if "Name" in line and "StartOnBoot" in line and "Version" in line:
+            # Collect this line and following lines until we hit a line that doesn't look like table
+            block = [line]
+            for j in range(i + 1, min(i + 25, len(lines))):
+                next_line = lines[j]
+                if next_line.strip() and (next_line.strip().startswith("-") or "appmgr" in next_line or "SecureDiagnostic" in next_line or re.match(r"^\s*\S+\s+", next_line)):
+                    block.append(next_line)
+                    if "appmgr" in next_line:
+                        # Extract version: last column that looks like x.y.z.w
+                        parts = next_line.split()
+                        for p in reversed(parts):
+                            if re.match(r"^\d+\.\d+\.\d+\.\d+$", p):
+                                appmgr_version = p
+                                break
+                else:
+                    break
+            table_text = "\n".join(block)
+            break
+    return table_text.strip(), appmgr_version
+
+
+# -----------------------------------------------------
+# Validation tab: receive STK + credentials, save STK, update Ansible vars/inventory, run playbook
 # -----------------------------------------------------
 @app.route("/validate", methods=["POST"])
 def validate():
@@ -438,10 +566,16 @@ def validate():
     switch_username = (request.form.get("switch_username") or "").strip()
     switch_password = request.form.get("switch_password") or ""
     expected_app_mgr_version = (request.form.get("expected_app_mgr_version") or "").strip()
+    platform_vars_name = (request.form.get("platform") or "").strip()
     if not stk_file or not stk_file.filename or not stk_file.filename.lower().endswith(".stk"):
         return jsonify({"success": False, "message": "Valid STK file is required"}), 400
     if not switch_ip or not switch_username:
         return jsonify({"success": False, "message": "Switch IP and username are required"}), 400
+    if platform_vars_name not in VALIDATION_PLATFORM_VARS:
+        return jsonify({
+            "success": False,
+            "message": "Invalid platform. Expected one of: m4350, m4300, m4250H, m4250L.",
+        }), 400
 
     filename = secure_filename(stk_file.filename).replace(" ", "_")
     dest_path = os.path.join(VALIDATION_STK_DIR, filename)
@@ -454,17 +588,100 @@ def validate():
     print("  Saved to      :", dest_path)
     print("  Switch IP     :", switch_ip)
     print("  Switch user   :", switch_username)
-    print("  Switch pass   :", "***" if switch_password else "(empty)")
+    print("  Switch pass   :", switch_password)
     print("  App-Mgr ver   :", expected_app_mgr_version or "(not set)")
+    print("  Platform      :", platform_vars_name, "(vars/%s.yml)" % platform_vars_name)
     print("-" * 50)
 
-    # dest_path, expected_app_mgr_version: pass to Ansible playbook
-    # TODO: run Ansible playbook with dest_path, switch_ip, switch_username, switch_password, expected_app_mgr_version
-    return jsonify({
-        "success": True,
-        "message": "Validation completed successfully (stub — add Ansible playbook)",
-        "stk_file_path": dest_path,
-    })
+    vars_path = _get_vars_path(platform_vars_name)
+    if not os.path.isdir(M4350_ANSIBLE_DIR):
+        return jsonify({"success": False, "message": "m4350_ansible directory not found"}), 500
+    if not os.path.isfile(vars_path) or not os.path.isfile(M4350_INVENTORY_FILE):
+        return jsonify({"success": False, "message": "Ansible vars or inventory file not found"}), 500
+
+    try:
+        _update_platform_vars(vars_path, filename, VALIDATION_STK_DIR, expected_app_mgr_version or "0.0.0.0")
+        _update_m4350_inventory(switch_ip, switch_username, switch_password)
+    except Exception as e:
+        print("[Validate] Failed to update Ansible files:", e)
+        return jsonify({"success": False, "message": "Failed to update Ansible config: %s" % str(e)}), 500
+
+    # Stream playbook output line by line, then send result JSON
+    def generate():
+        cmd = [
+            "ansible-playbook",
+            "-i", "inventory/hosts.yml",
+            "playbooks/03_image_upgrade.yml",
+            "-e", "platform=%s" % platform_vars_name,
+            "-vv",
+        ]
+        full_lines = []
+        try:
+            process = subprocess.Popen(
+                cmd,
+                cwd=M4350_ANSIBLE_DIR,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+            for line in iter(process.stdout.readline, ""):
+                full_lines.append(line)
+                yield line
+            process.wait(timeout=600)
+        except subprocess.TimeoutExpired:
+            if process:
+                process.kill()
+            full_lines.append("\n[Ansible playbook timed out.]\n")
+            yield "\n[Ansible playbook timed out.]\n"
+            yield VALIDATION_STREAM_RESULT_MARKER + json.dumps({
+                "success": False, "message": "Ansible playbook timed out.",
+                "application_table": "", "appmgr_version": None, "expected_version": expected_app_mgr_version.strip() or None, "version_match": False,
+            })
+            return
+        except FileNotFoundError:
+            msg = "ansible-playbook not found. Ensure Ansible is installed and on PATH."
+            full_lines.append("\n" + msg + "\n")
+            yield "\n" + msg + "\n"
+            yield VALIDATION_STREAM_RESULT_MARKER + json.dumps({
+                "success": False, "message": msg,
+                "application_table": "", "appmgr_version": None, "expected_version": expected_app_mgr_version.strip() or None, "version_match": False,
+            })
+            return
+        except Exception as e:
+            full_lines.append("\n" + str(e) + "\n")
+            yield "\n" + str(e) + "\n"
+            yield VALIDATION_STREAM_RESULT_MARKER + json.dumps({
+                "success": False, "message": str(e),
+                "application_table": "", "appmgr_version": None, "expected_version": expected_app_mgr_version.strip() or None, "version_match": False,
+            })
+            return
+
+        output = "".join(full_lines)
+        success = process.returncode == 0
+        log_filename = _write_validation_log(output)
+        application_table, appmgr_version = _parse_application_table_and_version(output)
+        expected_ver = (expected_app_mgr_version or "").strip()
+        version_match = bool(expected_ver and appmgr_version and expected_ver == appmgr_version.strip())
+        result = {
+            "success": success,
+            "message": "Validation completed successfully" if (success and version_match) else ("Validation completed; version mismatch" if success else "Validation (Ansible) failed"),
+            "stk_file_path": dest_path,
+            "log_file": log_filename,
+            "application_table": application_table,
+            "appmgr_version": appmgr_version or None,
+            "expected_version": expected_ver or None,
+            "version_match": version_match,
+        }
+        if not success:
+            result["details"] = output[:2000] if output else ""
+        yield VALIDATION_STREAM_RESULT_MARKER + json.dumps(result)
+
+    return Response(
+        stream_with_context(generate()),
+        content_type="text/plain; charset=utf-8",
+        headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 
 @app.route("/delete-log/<filename>", methods=["DELETE"])
@@ -489,4 +706,4 @@ def serve_static(filename):
 # =====================================================
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=8000)

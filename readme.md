@@ -24,11 +24,11 @@
 
 ## Start Backend & Frontend Server
 ```bash
-        gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app
+        gunicorn -w 4 -b 0.0.0.0:8000 backend_new:app
 ```
 **for Running the server in BackGround**
 ```bash
-    nohup gunicorn -w 4 -b 0.0.0.0:5000 backend_new:app > gunicorn.log 2>&1 &
+    nohup gunicorn -w 4 -b 0.0.0.0:8000 backend_new:app > gunicorn.log 2>&1 &
 ```
 
 ## Minor bug fix and New feature

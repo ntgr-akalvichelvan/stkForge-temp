@@ -148,7 +148,7 @@
 
 <!-- TAB 3: VALIDATION -->
 <div class="tab-content" id="tab3">
-  <div class="card">
+  <div class="card validation-form-card" id="validationFormCard">
     <h2 class="validation-title">Validate STK Image</h2>
 
     <!-- STK FILE UPLOAD -->
@@ -160,6 +160,12 @@
       <span class="clear-btn" id="clearValidationStkBtn">✕</span>
     </div>
     <input type="file" id="validationStkInput" accept=".stk" hidden>
+
+    <!-- DETECTED PLATFORM (from STK filename, like Current Version in STK Package) -->
+    <div class="current-version-box validation-platform-box" id="validationPlatformBox" style="display: none;">
+      <div class="title">Detected Platform</div>
+      <div class="value" id="validationPlatformValue">—</div>
+    </div>
 
     <!-- SWITCH CREDENTIALS -->
     <div class="validation-divider"></div>
@@ -181,6 +187,12 @@
     </button>
 
     <div id="validationResult" class="validation-result"></div>
+  </div>
+  <!-- Terminal (shown when Validate is clicked; form hidden) -->
+  <div class="validation-terminal-wrap" id="validationTerminalWrap" style="display: none;">
+    <div class="validation-terminal-header">Ansible output</div>
+    <pre class="validation-terminal" id="validationTerminal"></pre>
+    <button type="button" class="btn-validation-back" id="validationBackBtn">Run again</button>
   </div>
 </div>
 </div>
@@ -208,6 +220,18 @@
 
   </div>
 
+</div>
+
+<!-- Validation result modal: application table + version match -->
+<div id="validationResultModal" class="modal validation-result-modal">
+  <div class="modal-box validation-result-modal-box">
+    <div id="validationModalTitle" class="validation-modal-title validation-modal-success">Validation complete</div>
+    <div id="validationModalMessage" class="validation-modal-message"></div>
+    <pre id="validationModalTable" class="validation-modal-table"></pre>
+    <div class="validation-modal-actions">
+      <button type="button" id="validationModalClose" class="btn-validation-modal-close">Close</button>
+    </div>
+  </div>
 </div>
   <script src="app.js"></script>
 </body>

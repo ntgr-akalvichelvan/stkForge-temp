@@ -38,6 +38,23 @@ const switchUsername = document.getElementById("switchUsername");
 const switchPassword = document.getElementById("switchPassword");
 const expectedAppMgrVersion = document.getElementById("expectedAppMgrVersion");
 const validationResult = document.getElementById("validationResult");
+const validationPlatformBox = document.getElementById("validationPlatformBox");
+const validationPlatformValue = document.getElementById("validationPlatformValue");
+const validationFormCard = document.getElementById("validationFormCard");
+const validationTerminalWrap = document.getElementById("validationTerminalWrap");
+const validationTerminal = document.getElementById("validationTerminal");
+const validationBackBtn = document.getElementById("validationBackBtn");
+
+let validationDetectedPlatform = "";  // set from STK filename when file selected (e.g. M4350)
+
+const VALIDATION_RESULT_MARKER = "\n---RESULT---\n";
+
+// Display platform in lowercase for UI (m4350, m4300, m4250H, m4250L)
+function platformDisplayLowercase(platform) {
+  if (!platform) return "";
+  const map = { "M4350": "m4350", "M4300": "m4300", "M4250 IM": "m4250H", "M4250 LK": "m4250L" };
+  return map[platform] || platform.toLowerCase();
+}
 
 /* ================= TAB SWITCHING ================= */
 
@@ -733,6 +750,7 @@ function updateValidationButtonStates() {
   if (!validationStkInput || !validateBtn || !switchIp || !switchUsername || !switchPassword) return;
   const hasFile = validationStkInput.files.length > 0;
   const canValidate = hasFile &&
+    validationDetectedPlatform &&
     switchIp.value.trim() &&
     switchUsername.value.trim() &&
     switchPassword.value.trim();
@@ -752,6 +770,8 @@ function initValidationTab() {
       const icon = validationStkBtn.querySelector(".upload-icon");
       if (icon) icon.textContent = "⬆";
       validationStkBtn.classList.remove("has-file");
+      if (validationPlatformBox) { validationPlatformBox.style.display = "none"; validationPlatformValue.textContent = "—"; }
+      validationDetectedPlatform = "";
       updateValidationButtonStates();
     } else {
       validationStkInput.click();
@@ -766,6 +786,8 @@ function initValidationTab() {
       const icon = validationStkBtn.querySelector(".upload-icon");
       if (icon) icon.textContent = "⬆";
       validationStkBtn.classList.remove("has-file");
+      if (validationPlatformBox) { validationPlatformBox.style.display = "none"; validationPlatformValue.textContent = "—"; }
+      validationDetectedPlatform = "";
       updateValidationButtonStates();
     };
   }
@@ -777,6 +799,11 @@ function initValidationTab() {
     validationStkBtn.classList.add("has-file");
     const icon = validationStkBtn.querySelector(".upload-icon");
     if (icon) icon.textContent = "✕";
+    validationDetectedPlatform = detectPlatformFromFilename(file.name) || "";
+    if (validationPlatformBox && validationPlatformValue) {
+      validationPlatformBox.style.display = "block";
+      validationPlatformValue.textContent = validationDetectedPlatform || "—";
+    }
     updateValidationButtonStates();
   });
 
@@ -794,46 +821,120 @@ function initValidationTab() {
     if (validateBtn.classList.contains("running")) return;
     validateBtn.classList.add("running");
     validateBtn.disabled = true;
-    if (validationResult) {
-      validationResult.textContent = "Validating...";
-      validationResult.className = "validation-result validation-result-pending";
-    }
+
+    // Hide form, show terminal and stream output
+    if (validationFormCard) validationFormCard.style.display = "none";
+    if (validationTerminalWrap) validationTerminalWrap.style.display = "block";
+    if (validationTerminal) validationTerminal.textContent = "Running ansible-playbook...\n\n";
+
     const formData = new FormData();
     formData.append("stkFile", file);
     formData.append("switch_ip", switchIp.value.trim());
     formData.append("switch_username", switchUsername.value.trim());
     formData.append("switch_password", switchPassword.value.trim());
     formData.append("expected_app_mgr_version", (expectedAppMgrVersion && expectedAppMgrVersion.value) ? expectedAppMgrVersion.value.trim() : "");
+    formData.append("platform", platformDisplayLowercase(validationDetectedPlatform) || "");
+
     try {
-      const response = await fetch("/validate", {
-        method: "POST",
-        body: formData
-      });
-      const data = await response.json().catch(() => ({}));
-      if (response.ok && data.success !== false) {
-        if (validationResult) {
-          validationResult.textContent = data.message || "Validation completed successfully.";
-          validationResult.className = "validation-result validation-result-success";
-        }
-        showToast(data.message || "Validation completed", "success");
-      } else {
-        if (validationResult) {
-          validationResult.textContent = data.message || "Validation failed.";
-          validationResult.className = "validation-result validation-result-error";
-        }
+      const response = await fetch("/validate", { method: "POST", body: formData });
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await response.json().catch(() => ({}));
+        if (validationFormCard) validationFormCard.style.display = "block";
+        if (validationTerminalWrap) validationTerminalWrap.style.display = "none";
         showToast(data.message || "Validation failed", "error");
+        if (data.application_table !== undefined) showValidationResultModal(data);
+        validateBtn.classList.remove("running");
+        updateValidationButtonStates();
+        return;
+      }
+      if (!response.body) {
+        throw new Error("No response body");
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        if (validationTerminal) validationTerminal.textContent = buffer;
+        if (validationTerminal) validationTerminal.scrollTop = validationTerminal.scrollHeight;
+      }
+      const idx = buffer.indexOf(VALIDATION_RESULT_MARKER);
+      if (idx !== -1) {
+        if (validationTerminal) validationTerminal.textContent = buffer.slice(0, idx);
+        const jsonStr = buffer.slice(idx + VALIDATION_RESULT_MARKER.length).trim();
+        try {
+          const data = JSON.parse(jsonStr);
+          if (validationResult) {
+            validationResult.textContent = data.message || "";
+            validationResult.className = data.success ? "validation-result validation-result-success" : "validation-result validation-result-error";
+          }
+          if (data.success) showToast(data.message || "Validation completed", "success");
+          else showToast(data.message || "Validation failed", "error");
+          showValidationResultModal(data);
+        } catch (e) {
+          console.error(e);
+          showToast("Invalid result from server", "error");
+        }
+      } else if (validationTerminal) {
+        validationTerminal.textContent = buffer || "(No output)";
       }
     } catch (err) {
       console.error(err);
-      if (validationResult) {
-        validationResult.textContent = "Validation request failed (connection error).";
-        validationResult.className = "validation-result validation-result-error";
-      }
+      if (validationTerminal) validationTerminal.textContent += "\n\nConnection error: " + err.message;
       showToast("Failed to connect to backend", "error");
     }
     validateBtn.classList.remove("running");
     updateValidationButtonStates();
   };
+
+  if (validationBackBtn) {
+    validationBackBtn.onclick = () => {
+      if (validationTerminalWrap) validationTerminalWrap.style.display = "none";
+      if (validationFormCard) validationFormCard.style.display = "block";
+      if (validationTerminal) validationTerminal.textContent = "";
+      if (validationResult) { validationResult.textContent = ""; validationResult.className = "validation-result"; }
+    };
+  }
 }
+
+function showValidationResultModal(data) {
+  const modal = document.getElementById("validationResultModal");
+  const titleEl = document.getElementById("validationModalTitle");
+  const messageEl = document.getElementById("validationModalMessage");
+  const tableEl = document.getElementById("validationModalTable");
+  if (!modal || !titleEl || !messageEl || !tableEl) return;
+  titleEl.classList.remove("validation-modal-success", "validation-modal-mismatch", "validation-modal-failed");
+  const success = data && data.success === true;
+  const versionMatch = data && data.version_match === true;
+  if (success && versionMatch) {
+    titleEl.textContent = "Success";
+    titleEl.classList.add("validation-modal-success");
+    messageEl.textContent = data.expected_version
+      ? "Expected App-Mgr version matches: " + (data.appmgr_version || data.expected_version)
+      : "Validation completed successfully.";
+  } else if (success && !versionMatch) {
+    titleEl.textContent = "Version mismatch";
+    titleEl.classList.add("validation-modal-mismatch");
+    messageEl.textContent = data.expected_version && data.appmgr_version
+      ? "Expected " + data.expected_version + ", switch has " + data.appmgr_version
+      : "Validation completed but version could not be verified.";
+  } else {
+    titleEl.textContent = "Validation failed";
+    titleEl.classList.add("validation-modal-failed");
+    messageEl.textContent = data.message || "Ansible playbook failed.";
+  }
+  tableEl.textContent = (data.application_table && data.application_table.trim())
+    ? data.application_table.trim()
+    : "(No application table in output)";
+  modal.classList.add("show");
+}
+
+document.getElementById("validationModalClose") && document.getElementById("validationModalClose").addEventListener("click", () => {
+  const modal = document.getElementById("validationResultModal");
+  if (modal) modal.classList.remove("show");
+});
 
 initValidationTab();

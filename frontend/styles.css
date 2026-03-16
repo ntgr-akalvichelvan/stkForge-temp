@@ -2,24 +2,28 @@
   box-sizing: border-box;
   font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
-html, body {
+html {
   height: 100%;
+  overflow: hidden;
 }
 
 body {
+  height: 100%;
   margin: 0;
-  min-height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background: #f5f7fa;
   color: #0f172a;
-
-  padding-bottom: 85px; /* space for fixed footer (two lines) */
 }
 
-/* ================= HEADER ================= */
+/* ================= HEADER (fixed at top) ================= */
 .header {
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
   background: #1f2a37;
   color: white;
   padding: 2px 40px;
@@ -99,7 +103,7 @@ body {
 }
 
 
-/* ================= APP WRAPPER ================= */
+/* ================= SCROLLABLE MIDDLE (tabs + content) ================= */
 .app-wrapper {
   flex: 1;
   display: flex;
@@ -107,7 +111,10 @@ body {
   align-items: center;
   justify-content: flex-start;
   width: 100%;
-  padding: 20px 0;
+  margin-top: 92px;   /* clear fixed header + small gap between banner and tabs */
+  padding: 20px 0 100px 0; /* bottom padding so content scrolls above fixed footer */
+  overflow-y: auto;  /* only this section scrolls */
+  min-height: 0;     /* allow flex child to shrink and scroll */
 }
 
 .app {
@@ -1125,4 +1132,139 @@ button {
   background: #fee2e2;
   color: #991b1b;
   border: 1px solid #fca5a5;
+}
+
+/* ================= VALIDATION RESULT MODAL (modern UI) ================= */
+.validation-result-modal .modal-box {
+  max-width: 640px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.validation-result-modal-box {
+  padding: 0;
+  border-radius: 16px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.2);
+}
+
+.validation-modal-title {
+  padding: 20px 24px 12px;
+  font-size: 22px;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 16px 16px 0 0;
+}
+
+.validation-modal-success {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: white;
+}
+
+.validation-modal-mismatch {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  color: white;
+}
+
+.validation-modal-failed {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: white;
+}
+
+.validation-modal-message {
+  padding: 8px 24px 16px;
+  font-size: 15px;
+  color: #475569;
+  text-align: center;
+}
+
+.validation-modal-table {
+  margin: 0 24px 20px;
+  padding: 16px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: auto;
+  max-height: 280px;
+  white-space: pre;
+  font-family: ui-monospace, monospace;
+}
+
+.validation-modal-actions {
+  padding: 0 24px 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-validation-modal-close {
+  padding: 12px 32px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  background: linear-gradient(135deg, #0ea5a4, #22c55e);
+  color: white;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-validation-modal-close:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(14, 165, 164, 0.4);
+}
+
+/* ================= VALIDATION TERMINAL (streaming output) ================= */
+.validation-terminal-wrap {
+  width: 100%;
+  max-width: 720px;
+  background: #0f172a;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.validation-terminal-header {
+  padding: 12px 16px;
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid #334155;
+}
+
+.validation-terminal {
+  margin: 0;
+  padding: 16px;
+  min-height: 320px;
+  max-height: 70vh;
+  overflow: auto;
+  font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #e2e8f0;
+  background: #0f172a;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.validation-terminal-wrap .btn-validation-back {
+  display: block;
+  width: auto;
+  margin: 16px auto 20px;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  background: #334155;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.validation-terminal-wrap .btn-validation-back:hover {
+  background: #475569;
+  color: white;
 }
