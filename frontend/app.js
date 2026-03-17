@@ -36,6 +36,7 @@ const validateBtn = document.getElementById("validateBtn");
 const switchIp = document.getElementById("switchIp");
 const switchUsername = document.getElementById("switchUsername");
 const switchPassword = document.getElementById("switchPassword");
+const switchPasswordToggle = document.getElementById("switchPasswordToggle");
 const expectedAppMgrVersion = document.getElementById("expectedAppMgrVersion");
 const validationResult = document.getElementById("validationResult");
 const validationPlatformBox = document.getElementById("validationPlatformBox");
@@ -574,22 +575,30 @@ async function loadLogs(){
     logs.forEach(log => {
 
       const parts = log.name.replace(".log","").split("_");
+      let platform, version, date, time;
 
-      // last two values are always timestamp
-      const time = parts[parts.length - 1];
-      const date = parts[parts.length - 2];
-
-      // version always before timestamp
-      const version = parts[parts.length - 3];
-
-      // everything before version is platform
-      const platform = parts.slice(0, parts.length - 3).join("_");
+      if (parts[0] === "validation" && parts.length >= 5) {
+        // validation_<platform>_<version>_<date>_<time>.log
+        platform = parts[1];
+        version = parts[2];
+        date = parts[3];
+        time = parts[4];
+      } else {
+        // packaging log: last two are timestamp, version before that, rest is platform
+        time = parts[parts.length - 1];
+        date = parts[parts.length - 2];
+        version = parts[parts.length - 3];
+        platform = parts.slice(0, parts.length - 3).join("_");
+      }
 
       const formattedDate =
-        `${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}`;
-
+        date.length >= 8 ? `${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}` : date;
       const formattedTime =
-        `${time.slice(0,2)}:${time.slice(2,4)}:${time.slice(4,6)}`;
+        time.length >= 6 ? `${time.slice(0,2)}:${time.slice(2,4)}:${time.slice(4,6)}` : time;
+
+      const isValidationLog = parts[0] === "validation" && parts.length >= 5;
+      const versionLabel = (isValidationLog && version === "unknown") ? "Version not detected" : version;
+      const logTitle = isValidationLog ? `validation • ${platform} • ${versionLabel}` : `${platform} • ${version}`;
 
       const sizeKB = Math.round(log.size / 1024);
 
@@ -601,7 +610,7 @@ async function loadLogs(){
       row.innerHTML = `
       <div class="log-info">
           <div class="log-title">
-              ${platform} • ${version}
+              ${logTitle}
           </div>
           <div class="log-meta">
               Generated: ${formattedDate} ${formattedTime}
@@ -812,6 +821,16 @@ function initValidationTab() {
   switchPassword.addEventListener("input", updateValidationButtonStates);
   if (expectedAppMgrVersion) expectedAppMgrVersion.addEventListener("input", updateValidationButtonStates);
 
+  if (switchPasswordToggle && switchPassword) {
+    switchPasswordToggle.addEventListener("click", () => {
+      const isPassword = switchPassword.type === "password";
+      switchPassword.type = isPassword ? "text" : "password";
+      switchPasswordToggle.classList.toggle("show-password", isPassword);
+      switchPasswordToggle.setAttribute("title", isPassword ? "Hide password" : "Show password");
+      switchPasswordToggle.setAttribute("aria-label", isPassword ? "Hide password" : "Show password");
+    });
+  }
+
   validateBtn.onclick = async () => {
     const file = validationStkInput.files[0];
     if (!file || !switchIp.value.trim() || !switchUsername.value.trim() || !switchPassword.value.trim()) {
@@ -907,28 +926,34 @@ function showValidationResultModal(data) {
   const tableEl = document.getElementById("validationModalTable");
   if (!modal || !titleEl || !messageEl || !tableEl) return;
   titleEl.classList.remove("validation-modal-success", "validation-modal-mismatch", "validation-modal-failed");
+  modal.classList.remove("validation-modal-success", "validation-modal-mismatch", "validation-modal-failed");
   const success = data && data.success === true;
   const versionMatch = data && data.version_match === true;
   if (success && versionMatch) {
     titleEl.textContent = "Success";
     titleEl.classList.add("validation-modal-success");
+    modal.classList.add("validation-modal-success");
     messageEl.textContent = data.expected_version
       ? "Expected App-Mgr version matches: " + (data.appmgr_version || data.expected_version)
       : "Validation completed successfully.";
   } else if (success && !versionMatch) {
     titleEl.textContent = "Version mismatch";
     titleEl.classList.add("validation-modal-mismatch");
+    modal.classList.add("validation-modal-mismatch");
     messageEl.textContent = data.expected_version && data.appmgr_version
       ? "Expected " + data.expected_version + ", switch has " + data.appmgr_version
       : "Validation completed but version could not be verified.";
   } else {
     titleEl.textContent = "Validation failed";
     titleEl.classList.add("validation-modal-failed");
+    modal.classList.add("validation-modal-failed");
     messageEl.textContent = data.message || "Ansible playbook failed.";
   }
-  tableEl.textContent = (data.application_table && data.application_table.trim())
-    ? data.application_table.trim()
-    : "(No application table in output)";
+  tableEl.textContent = (data.application_table_name_version && data.application_table_name_version.trim())
+    ? data.application_table_name_version.trim()
+    : (data.application_table && data.application_table.trim())
+      ? data.application_table.trim()
+      : "(No application table in output)";
   modal.classList.add("show");
 }
 

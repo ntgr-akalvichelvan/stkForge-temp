@@ -392,6 +392,48 @@ select {
     transition: border-color 0.2s ease;
 }
 
+.password-input-wrap {
+  position: relative;
+  margin-bottom: 22px;
+}
+.password-input-wrap input {
+  margin-bottom: 0;
+  padding-right: 48px;
+}
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.password-toggle:hover {
+  color: #334155;
+  background: #f1f5f9;
+}
+.password-toggle svg {
+  display: block;
+}
+.password-toggle .icon-eye-off {
+  display: none;
+}
+.password-toggle.show-password .icon-eye {
+  display: none;
+}
+.password-toggle.show-password .icon-eye-off {
+  display: block !important;
+}
+
 .version-error { 
     color: #dc2626; 
     display: none; 
@@ -1135,6 +1177,10 @@ button {
 }
 
 /* ================= VALIDATION RESULT MODAL (modern UI) ================= */
+/* Keep overlay dark; state classes (success/mismatch/failed) only style title and close button */
+.validation-result-modal.modal {
+  background: rgba(0, 0, 0, 0.35);
+}
 .validation-result-modal .modal-box {
   max-width: 640px;
   max-height: 90vh;
@@ -1205,25 +1251,47 @@ button {
   font-size: 16px;
   font-weight: 600;
   border: none;
-  background: linear-gradient(135deg, #0ea5a4, #22c55e);
   color: white;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
+.validation-result-modal.validation-modal-success .btn-validation-modal-close {
+  background: linear-gradient(135deg, #059669, #10b981);
+}
+.validation-result-modal.validation-modal-success .btn-validation-modal-close:hover {
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
+}
+
+.validation-result-modal.validation-modal-mismatch .btn-validation-modal-close {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+}
+.validation-result-modal.validation-modal-mismatch .btn-validation-modal-close:hover {
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4);
+}
+
+.validation-result-modal.validation-modal-failed .btn-validation-modal-close {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+}
+.validation-result-modal.validation-modal-failed .btn-validation-modal-close:hover {
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
+}
+
 .btn-validation-modal-close:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(14, 165, 164, 0.4);
 }
 
 /* ================= VALIDATION TERMINAL (streaming output) ================= */
 .validation-terminal-wrap {
   width: 100%;
-  max-width: 720px;
+  max-width: 960px;
   background: #0f172a;
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  max-height: 75vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .validation-terminal-header {
@@ -1233,13 +1301,15 @@ button {
   font-size: 13px;
   font-weight: 600;
   border-bottom: 1px solid #334155;
+  flex-shrink: 0;
 }
 
 .validation-terminal {
   margin: 0;
   padding: 16px;
-  min-height: 320px;
-  max-height: 70vh;
+  flex: 1;
+  min-height: 200px;
+  max-height: 55vh;
   overflow: auto;
   font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
   font-size: 13px;

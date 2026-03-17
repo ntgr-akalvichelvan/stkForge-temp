@@ -355,13 +355,20 @@ def view_log(filename):
     name = filename.replace(".log", "")
     parts = name.split("_")
 
-    time = parts[-1]
-    date = parts[-2]
-    version = parts[-3]
-    platform = "_".join(parts[:-3])
+    if len(parts) >= 5 and parts[0] == "validation":
+        # validation_<platform>_<version>_<date>_<time>.log
+        platform = parts[1]
+        version = parts[2]
+        date = parts[3]
+        time = parts[4]
+    else:
+        time = parts[-1]
+        date = parts[-2]
+        version = parts[-3]
+        platform = "_".join(parts[:-3])
 
-    formatted_date = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
-    formatted_time = f"{time[:2]}:{time[2:4]}:{time[4:6]}"
+    formatted_date = f"{date[:4]}-{date[4:6]}-{date[6:8]}" if len(date) >= 8 else date
+    formatted_time = f"{time[:2]}:{time[2:4]}:{time[4:6]}" if len(time) >= 6 else time
 
     html = f"""
     <html>
@@ -509,16 +516,43 @@ VALIDATION_LOG_HEADER = (
 )
 
 
-def _write_validation_log(full_output):
-    """Write full command output to a log file in LOG_DIR with validation tag. Returns log filename."""
+def _write_validation_log(full_output, platform_vars_name, appmgr_version):
+    """Write full command output to a log file in LOG_DIR with validation tag. Filename includes platform and version for logs tab."""
     os.makedirs(LOG_DIR, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_filename = "validation_%s.log" % timestamp
+    version_safe = (appmgr_version or "unknown").strip()
+    log_filename = "validation_%s_%s_%s.log" % (platform_vars_name, version_safe, timestamp)
     log_path = os.path.join(LOG_DIR, log_filename)
     with open(log_path, "w") as f:
         f.write(VALIDATION_LOG_HEADER)
         f.write(full_output)
     return log_filename
+
+
+def _table_name_version_only(table_text):
+    """Reduce application table to Name and Version columns only. Returns a simple two-column text block."""
+    if not table_text or not table_text.strip():
+        return ""
+    lines = table_text.strip().split("\n")
+    out = []
+    for i, line in enumerate(lines):
+        parts = line.split()
+        if not parts:
+            continue
+        if i == 0 and "Name" in line and "Version" in line:
+            out.append("Name                Version")
+            out.append("-" * 40)
+            continue
+        if line.strip().startswith("-"):
+            continue
+        name = parts[0] if parts else ""
+        version = ""
+        for p in reversed(parts[1:]):
+            if re.match(r"^\d+\.\d+\.\d+\.\d+$", p):
+                version = p
+                break
+        out.append("%-18s %s" % (name, version or "-"))
+    return "\n".join(out) if out else table_text
 
 
 def _parse_application_table_and_version(full_output):
@@ -636,7 +670,7 @@ def validate():
             yield "\n[Ansible playbook timed out.]\n"
             yield VALIDATION_STREAM_RESULT_MARKER + json.dumps({
                 "success": False, "message": "Ansible playbook timed out.",
-                "application_table": "", "appmgr_version": None, "expected_version": expected_app_mgr_version.strip() or None, "version_match": False,
+                "application_table": "", "application_table_name_version": "", "appmgr_version": None, "expected_version": expected_app_mgr_version.strip() or None, "version_match": False,
             })
             return
         except FileNotFoundError:
@@ -645,7 +679,7 @@ def validate():
             yield "\n" + msg + "\n"
             yield VALIDATION_STREAM_RESULT_MARKER + json.dumps({
                 "success": False, "message": msg,
-                "application_table": "", "appmgr_version": None, "expected_version": expected_app_mgr_version.strip() or None, "version_match": False,
+                "application_table": "", "application_table_name_version": "", "appmgr_version": None, "expected_version": expected_app_mgr_version.strip() or None, "version_match": False,
             })
             return
         except Exception as e:
@@ -653,22 +687,24 @@ def validate():
             yield "\n" + str(e) + "\n"
             yield VALIDATION_STREAM_RESULT_MARKER + json.dumps({
                 "success": False, "message": str(e),
-                "application_table": "", "appmgr_version": None, "expected_version": expected_app_mgr_version.strip() or None, "version_match": False,
+                "application_table": "", "application_table_name_version": "", "appmgr_version": None, "expected_version": expected_app_mgr_version.strip() or None, "version_match": False,
             })
             return
 
         output = "".join(full_lines)
         success = process.returncode == 0
-        log_filename = _write_validation_log(output)
         application_table, appmgr_version = _parse_application_table_and_version(output)
+        log_filename = _write_validation_log(output, platform_vars_name, appmgr_version or "")
         expected_ver = (expected_app_mgr_version or "").strip()
         version_match = bool(expected_ver and appmgr_version and expected_ver == appmgr_version.strip())
+        application_table_name_version = _table_name_version_only(application_table)
         result = {
             "success": success,
             "message": "Validation completed successfully" if (success and version_match) else ("Validation completed; version mismatch" if success else "Validation (Ansible) failed"),
             "stk_file_path": dest_path,
             "log_file": log_filename,
             "application_table": application_table,
+            "application_table_name_version": application_table_name_version,
             "appmgr_version": appmgr_version or None,
             "expected_version": expected_ver or None,
             "version_match": version_match,
