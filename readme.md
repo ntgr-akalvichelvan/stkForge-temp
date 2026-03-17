@@ -24,11 +24,11 @@
 
 ## Start Backend & Frontend Server
 ```bash
-        gunicorn -w 4 -b 0.0.0.0:8000 backend_new:app
+        gunicorn -w 4 -b 0.0.0.0:8000 --timeout 600 backend_new:app
 ```
 **for Running the server in BackGround**
 ```bash
-    nohup gunicorn -w 4 -b 0.0.0.0:8000 backend_new:app > gunicorn.log 2>&1 &
+    nohup gunicorn -w 4 -b 0.0.0.0:8000 --timeout 600 backend_new:app > gunicorn.log 2>&1 &
 ```
 
 ## Minor bug fix and New feature
@@ -40,3 +40,4 @@ Adding Ability to view logs without downloading
 Adding UI and Ansible script to validate the image script for detecting app-mgr version
 
 m4350_ansible folder is added.
+
