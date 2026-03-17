@@ -1,5 +1,5 @@
 image_method: scp
-image_file: 
+image_file: M4250L-v13.0.5.25.stk
 image_path: /home/swnuc01/arun/stkForge-temp/validation_stk_uploads
 boot_image: image2
 image_server_host: 10.216.202.82
@@ -7,4 +7,4 @@ image_server_username: swnuc01
 image_server_password: switch@123
 application:
   name: appmgr
-  expected_version: "1.0.5.32"
+  expected_version: "1.0.5.33"

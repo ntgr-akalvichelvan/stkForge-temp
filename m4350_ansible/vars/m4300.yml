@@ -1,6 +1,6 @@
 image_method: scp
 image_file: M4300-V13.0.5.24.stk 
-image_path: /root/projects/images
+image_path: /home/swnuc01/arun/stkForge-temp/validation_stk_uploads
 boot_image: image2
 image_server_host:  10.216.202.75
 image_server_username: root
