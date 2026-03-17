@@ -630,8 +630,13 @@ def validate():
     vars_path = _get_vars_path(platform_vars_name)
     if not os.path.isdir(M4350_ANSIBLE_DIR):
         return jsonify({"success": False, "message": "m4350_ansible directory not found"}), 500
-    if not os.path.isfile(vars_path) or not os.path.isfile(M4350_INVENTORY_FILE):
-        return jsonify({"success": False, "message": "Ansible vars or inventory file not found"}), 500
+    if not os.path.isfile(vars_path):
+        return jsonify({
+            "success": False,
+            "message": "Ansible vars file not found for platform '%s' (expected: %s)" % (platform_vars_name, os.path.basename(vars_path)),
+        }), 500
+    if not os.path.isfile(M4350_INVENTORY_FILE):
+        return jsonify({"success": False, "message": "Ansible inventory file not found: inventory/hosts.yml"}), 500
 
     try:
         _update_platform_vars(vars_path, filename, VALIDATION_STK_DIR, expected_app_mgr_version or "0.0.0.0")
@@ -650,6 +655,8 @@ def validate():
             "-vv",
         ]
         full_lines = []
+        env = os.environ.copy()
+        env["ANSIBLE_FORCE_COLOR"] = "1"  # emit ANSI colors even when stdout is a pipe
         try:
             process = subprocess.Popen(
                 cmd,
@@ -658,6 +665,7 @@ def validate():
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
+                env=env,
             )
             for line in iter(process.stdout.readline, ""):
                 full_lines.append(line)

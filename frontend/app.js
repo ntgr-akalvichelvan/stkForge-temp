@@ -50,6 +50,60 @@ let validationDetectedPlatform = "";  // set from STK filename when file selecte
 
 const VALIDATION_RESULT_MARKER = "\n---RESULT---\n";
 
+/**
+ * Convert ANSI escape codes (e.g. from Ansible) to HTML for colored terminal output.
+ * Escapes HTML first, then replaces SGR codes with <span> styles.
+ */
+function ansiToHtml(text) {
+  if (text == null || text === "") return "";
+  const esc = (s) => String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+  const s = esc(text);
+  const sgr = (codes) => {
+    const n = (codes || "0").split(";").map((c) => parseInt(c, 10) || 0);
+    const styles = [];
+    for (const c of n) {
+      if (c === 0) return "color:inherit;font-weight:normal;";
+      if (c === 1) styles.push("font-weight:bold");
+      else if (c === 22) styles.push("font-weight:normal");
+      else if (c === 31) styles.push("color:#f44336");
+      else if (c === 32) styles.push("color:#4caf50");
+      else if (c === 33) styles.push("color:#ffeb3b");
+      else if (c === 34) styles.push("color:#2196f3");
+      else if (c === 35) styles.push("color:#e040fb");
+      else if (c === 36) styles.push("color:#00bcd4");
+      else if (c === 37) styles.push("color:#e0e0e0");
+      else if (c === 39) styles.push("color:inherit");
+      else if (c === 90) styles.push("color:#757575");
+      else if (c === 91) styles.push("color:#ff5252");
+      else if (c === 92) styles.push("color:#69f0ae");
+      else if (c === 93) styles.push("color:#ffff00");
+      else if (c === 94) styles.push("color:#448aff");
+      else if (c === 95) styles.push("color:#ff80ab");
+      else if (c === 96) styles.push("color:#84ffff");
+      else if (c === 97) styles.push("color:#ffffff");
+    }
+    return styles.length ? styles.join(";") + ";" : "";
+  };
+  const open = (style) => style ? `<span style="${style}">` : "<span>";
+  let out = "";
+  let i = 0;
+  const re = /\x1b\[([\d;]*)m/g;
+  let match;
+  let lastIndex = 0;
+  while ((match = re.exec(s)) !== null) {
+    out += s.slice(lastIndex, match.index);
+    const style = sgr(match[1]);
+    out += "</span>" + (style ? open(style) : "<span>");
+    lastIndex = re.lastIndex;
+  }
+  out += s.slice(lastIndex);
+  return "<span>" + out + "</span>";
+}
+
 // Display platform in lowercase for UI (m4350, m4300, m4250H, m4250L)
 function platformDisplayLowercase(platform) {
   if (!platform) return "";
@@ -844,7 +898,7 @@ function initValidationTab() {
     // Hide form, show terminal and stream output
     if (validationFormCard) validationFormCard.style.display = "none";
     if (validationTerminalWrap) validationTerminalWrap.style.display = "block";
-    if (validationTerminal) validationTerminal.textContent = "Running ansible-playbook...\n\n";
+    if (validationTerminal) validationTerminal.innerHTML = ansiToHtml("Running ansible-playbook...\n\n");
 
     const formData = new FormData();
     formData.append("stkFile", file);
@@ -877,12 +931,14 @@ function initValidationTab() {
         const { value, done } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        if (validationTerminal) validationTerminal.textContent = buffer;
-        if (validationTerminal) validationTerminal.scrollTop = validationTerminal.scrollHeight;
+        if (validationTerminal) {
+          validationTerminal.innerHTML = ansiToHtml(buffer);
+          validationTerminal.scrollTop = validationTerminal.scrollHeight;
+        }
       }
       const idx = buffer.indexOf(VALIDATION_RESULT_MARKER);
       if (idx !== -1) {
-        if (validationTerminal) validationTerminal.textContent = buffer.slice(0, idx);
+        if (validationTerminal) validationTerminal.innerHTML = ansiToHtml(buffer.slice(0, idx));
         const jsonStr = buffer.slice(idx + VALIDATION_RESULT_MARKER.length).trim();
         try {
           const data = JSON.parse(jsonStr);
@@ -898,11 +954,11 @@ function initValidationTab() {
           showToast("Invalid result from server", "error");
         }
       } else if (validationTerminal) {
-        validationTerminal.textContent = buffer || "(No output)";
+        validationTerminal.innerHTML = ansiToHtml(buffer || "(No output)");
       }
     } catch (err) {
       console.error(err);
-      if (validationTerminal) validationTerminal.textContent += "\n\nConnection error: " + err.message;
+      if (validationTerminal) validationTerminal.innerHTML = ansiToHtml((validationTerminal.innerText || "") + "\n\nConnection error: " + err.message);
       showToast("Failed to connect to backend", "error");
     }
     validateBtn.classList.remove("running");
@@ -913,7 +969,7 @@ function initValidationTab() {
     validationBackBtn.onclick = () => {
       if (validationTerminalWrap) validationTerminalWrap.style.display = "none";
       if (validationFormCard) validationFormCard.style.display = "block";
-      if (validationTerminal) validationTerminal.textContent = "";
+      if (validationTerminal) validationTerminal.innerHTML = "";
       if (validationResult) { validationResult.textContent = ""; validationResult.className = "validation-result"; }
     };
   }

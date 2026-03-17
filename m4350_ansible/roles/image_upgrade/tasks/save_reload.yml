@@ -20,8 +20,9 @@
     expect "#"
     send "write memory\r"
 
+    # M4350: "Are you sure you want to save?"; M4250 may differ
     expect {
-      "Are you sure you want to save?" {
+      "Are you sure you " {
         send "y\r"
       }
     }
@@ -29,8 +30,9 @@
     expect "#"
     send "reload\r"
 
+    # M4350: "Are you sure you want to reload? (y/n)"; M4250: "Are you sure you would like to reset the system? (y/n)"
     expect {
-      "Are you sure you want to reload" {
+      "Are you sure you " {
         send "y\r"
       }
     }
