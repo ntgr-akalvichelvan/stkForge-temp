@@ -1,4 +1,0 @@
----
-- include_tasks: validate_bootvar.yml
-- include_tasks: parse_bootvar.yml
-- include_tasks: validate_bootvar_result.yml

@@ -1,5 +1,0 @@
-- name: Validate stack
-  hosts: m4350_stack
-  gather_facts: no
-  roles:
-    - validate

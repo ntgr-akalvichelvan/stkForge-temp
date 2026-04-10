@@ -39,14 +39,19 @@ const switchPassword = document.getElementById("switchPassword");
 const switchPasswordToggle = document.getElementById("switchPasswordToggle");
 const expectedAppMgrVersion = document.getElementById("expectedAppMgrVersion");
 const validationResult = document.getElementById("validationResult");
-const validationPlatformBox = document.getElementById("validationPlatformBox");
 const validationPlatformValue = document.getElementById("validationPlatformValue");
+const validationImageVersionValue = document.getElementById("validationImageVersionValue");
 const validationFormCard = document.getElementById("validationFormCard");
+const appContainer = document.querySelector(".app");
 const validationTerminalWrap = document.getElementById("validationTerminalWrap");
 const validationTerminal = document.getElementById("validationTerminal");
 const validationBackBtn = document.getElementById("validationBackBtn");
 
 let validationDetectedPlatform = "";  // set from STK filename when file selected (e.g. M4350)
+
+const VALIDATION_PREVIEW_EMPTY = "Select an .stk file to preview";
+const VALIDATION_PLATFORM_UNKNOWN = "Not detected from this filename";
+const VALIDATION_VERSION_UNKNOWN = "No version found in filename";
 
 const VALIDATION_RESULT_MARKER = "\n---RESULT---\n";
 
@@ -132,6 +137,10 @@ tabButtons.forEach(btn => {
     const target = document.getElementById(tabId);
     if (target) {
       target.classList.add("active");
+    }
+    if (appContainer) {
+      if (tabId === "tab3") appContainer.classList.add("app--validation-wide");
+      else appContainer.classList.remove("app--validation-wide");
     }
     if (tabId === "tab2") {
       loadLogs();
@@ -264,6 +273,13 @@ function detectPlatformFromFilename(filename) {
   }
   
   return "";
+}
+
+function detectStkImageVersionFromFilename(filename) {
+  const v = filename.match(/[-_]?v(\d+\.\d+\.\d+\.\d+)\.stk$/i);
+  if (v) return v[1];
+  const any = filename.match(/(\d+\.\d+\.\d+\.\d+)/);
+  return any ? any[1] : "";
 }
 
 function validatePlatformMatch() {
@@ -809,14 +825,104 @@ document.getElementById("confirmDelete").onclick = async () => {
 
 /* ================= VALIDATION TAB ================= */
 
+function validateSwitchIpInput() {
+  const errEl = document.getElementById("switchIpError");
+  if (!switchIp || !errEl) return false;
+  const raw = switchIp.value.trim();
+  switchIp.classList.remove("input-error");
+  errEl.textContent = "";
+  errEl.style.display = "none";
+
+  if (!raw) return false;
+
+  if (/[^0-9.]/.test(raw)) {
+    errEl.textContent = "Only digits and dots are allowed.";
+    errEl.style.display = "block";
+    switchIp.classList.add("input-error");
+    return false;
+  }
+
+  const dotCount = (raw.match(/\./g) || []).length;
+  if (dotCount > 3) {
+    errEl.textContent = "An IPv4 address uses exactly three dots (four numbers, e.g. 192.168.1.1).";
+    errEl.style.display = "block";
+    switchIp.classList.add("input-error");
+    return false;
+  }
+
+  const parts = raw.split(".");
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    if (p === "") continue;
+    if (!/^\d+$/.test(p)) {
+      errEl.textContent = "Each octet must be a whole number.";
+      errEl.style.display = "block";
+      switchIp.classList.add("input-error");
+      return false;
+    }
+    const n = parseInt(p, 10);
+    if (n > 255) {
+      errEl.textContent = "Each octet must be between 0 and 255.";
+      errEl.style.display = "block";
+      switchIp.classList.add("input-error");
+      return false;
+    }
+  }
+
+  if (dotCount < 3) return false;
+
+  if (parts.length !== 4 || parts.some(p => p === "")) {
+    errEl.textContent = "Enter four numbers separated by dots (e.g. 192.168.1.1).";
+    errEl.style.display = "block";
+    switchIp.classList.add("input-error");
+    return false;
+  }
+
+  for (const p of parts) {
+    const n = parseInt(p, 10);
+    if (n < 0 || n > 255) {
+      errEl.textContent = "Each octet must be between 0 and 255.";
+      errEl.style.display = "block";
+      switchIp.classList.add("input-error");
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function validateExpectedAppMgrInput() {
+  const errEl = document.getElementById("expectedAppMgrVersionError");
+  if (!expectedAppMgrVersion || !errEl) return true;
+  const v = expectedAppMgrVersion.value.trim();
+  expectedAppMgrVersion.classList.remove("input-error");
+  errEl.textContent = "";
+  errEl.style.display = "none";
+
+  if (!v) return true;
+
+  const parsed = parseVersion(v);
+  if (!parsed) {
+    errEl.textContent = "Invalid version format (use X.Y.Z.N)";
+    errEl.style.display = "block";
+    expectedAppMgrVersion.classList.add("input-error");
+    return false;
+  }
+
+  return true;
+}
+
 function updateValidationButtonStates() {
   if (!validationStkInput || !validateBtn || !switchIp || !switchUsername || !switchPassword) return;
   const hasFile = validationStkInput.files.length > 0;
+  const ipOk = validateSwitchIpInput();
+  const appMgrOk = validateExpectedAppMgrInput();
   const canValidate = hasFile &&
     validationDetectedPlatform &&
-    switchIp.value.trim() &&
+    ipOk &&
     switchUsername.value.trim() &&
-    switchPassword.value.trim();
+    switchPassword.value.trim() &&
+    appMgrOk;
   validateBtn.disabled = !canValidate;
   if (canValidate) validateBtn.classList.add("enabled");
   else validateBtn.classList.remove("enabled");
@@ -824,18 +930,30 @@ function updateValidationButtonStates() {
 
 function initValidationTab() {
   if (!validationStkBtn || !validationStkInput || !validateBtn ||
-      !validationResult || !switchIp || !switchUsername || !switchPassword || !expectedAppMgrVersion) return;
+      !validationResult || !switchIp || !switchUsername || !switchPassword || !expectedAppMgrVersion ||
+      !validationPlatformValue || !validationImageVersionValue) return;
+
+  function setValidationPreviewEmpty() {
+    validationPlatformValue.textContent = VALIDATION_PREVIEW_EMPTY;
+    validationPlatformValue.classList.add("is-empty");
+    validationImageVersionValue.textContent = VALIDATION_PREVIEW_EMPTY;
+    validationImageVersionValue.classList.add("is-empty");
+  }
+
+  function clearValidationStkUi() {
+    validationStkInput.value = "";
+    if (validationStkBtnText) validationStkBtnText.textContent = "Select STK File";
+    const icon = validationStkBtn.querySelector(".upload-icon");
+    if (icon) icon.textContent = "⬆";
+    validationStkBtn.classList.remove("has-file");
+    setValidationPreviewEmpty();
+    validationDetectedPlatform = "";
+    updateValidationButtonStates();
+  }
 
   validationStkBtn.onclick = () => {
     if (validationStkInput.files.length) {
-      validationStkInput.value = "";
-      if (validationStkBtnText) validationStkBtnText.textContent = "Select STK File";
-      const icon = validationStkBtn.querySelector(".upload-icon");
-      if (icon) icon.textContent = "⬆";
-      validationStkBtn.classList.remove("has-file");
-      if (validationPlatformBox) { validationPlatformBox.style.display = "none"; validationPlatformValue.textContent = "—"; }
-      validationDetectedPlatform = "";
-      updateValidationButtonStates();
+      clearValidationStkUi();
     } else {
       validationStkInput.click();
     }
@@ -844,28 +962,34 @@ function initValidationTab() {
   if (clearValidationStkBtn) {
     clearValidationStkBtn.onclick = (e) => {
       e.stopPropagation();
-      validationStkInput.value = "";
-      if (validationStkBtnText) validationStkBtnText.textContent = "Select STK File";
-      const icon = validationStkBtn.querySelector(".upload-icon");
-      if (icon) icon.textContent = "⬆";
-      validationStkBtn.classList.remove("has-file");
-      if (validationPlatformBox) { validationPlatformBox.style.display = "none"; validationPlatformValue.textContent = "—"; }
-      validationDetectedPlatform = "";
-      updateValidationButtonStates();
+      clearValidationStkUi();
     };
   }
 
   validationStkInput.addEventListener("change", () => {
     const file = validationStkInput.files[0];
     if (!file) return;
-    if (validationStkBtnText) validationStkBtnText.textContent = file.name;
+    if (validationStkBtnText) {
+      validationStkBtnText.textContent = file.name.length > 48 ? file.name.slice(0, 45) + "…" : file.name;
+    }
     validationStkBtn.classList.add("has-file");
     const icon = validationStkBtn.querySelector(".upload-icon");
     if (icon) icon.textContent = "✕";
     validationDetectedPlatform = detectPlatformFromFilename(file.name) || "";
-    if (validationPlatformBox && validationPlatformValue) {
-      validationPlatformBox.style.display = "block";
-      validationPlatformValue.textContent = validationDetectedPlatform || "—";
+    if (validationDetectedPlatform) {
+      validationPlatformValue.textContent = validationDetectedPlatform;
+      validationPlatformValue.classList.remove("is-empty");
+    } else {
+      validationPlatformValue.textContent = VALIDATION_PLATFORM_UNKNOWN;
+      validationPlatformValue.classList.add("is-empty");
+    }
+    const imgVer = detectStkImageVersionFromFilename(file.name);
+    if (imgVer) {
+      validationImageVersionValue.textContent = imgVer;
+      validationImageVersionValue.classList.remove("is-empty");
+    } else {
+      validationImageVersionValue.textContent = VALIDATION_VERSION_UNKNOWN;
+      validationImageVersionValue.classList.add("is-empty");
     }
     updateValidationButtonStates();
   });
@@ -887,16 +1011,19 @@ function initValidationTab() {
 
   validateBtn.onclick = async () => {
     const file = validationStkInput.files[0];
-    if (!file || !switchIp.value.trim() || !switchUsername.value.trim() || !switchPassword.value.trim()) {
+    if (!file || !switchUsername.value.trim() || !switchPassword.value.trim()) {
       showToast("Select STK file and fill switch credentials", "error");
+      return;
+    }
+    if (!validateSwitchIpInput() || !validateExpectedAppMgrInput()) {
+      showToast("Fix the highlighted fields before validating.", "error");
       return;
     }
     if (validateBtn.classList.contains("running")) return;
     validateBtn.classList.add("running");
     validateBtn.disabled = true;
 
-    // Hide form, show terminal and stream output
-    if (validationFormCard) validationFormCard.style.display = "none";
+    if (validationFormCard) validationFormCard.classList.add("validation-running");
     if (validationTerminalWrap) validationTerminalWrap.style.display = "block";
     if (validationTerminal) validationTerminal.innerHTML = ansiToHtml("Running ansible-playbook...\n\n");
 
@@ -913,7 +1040,7 @@ function initValidationTab() {
       const contentType = response.headers.get("content-type") || "";
       if (contentType.includes("application/json")) {
         const data = await response.json().catch(() => ({}));
-        if (validationFormCard) validationFormCard.style.display = "block";
+        if (validationFormCard) validationFormCard.classList.remove("validation-running");
         if (validationTerminalWrap) validationTerminalWrap.style.display = "none";
         showToast(data.message || "Validation failed", "error");
         if (data.application_table !== undefined) showValidationResultModal(data);
@@ -961,6 +1088,7 @@ function initValidationTab() {
       if (validationTerminal) validationTerminal.innerHTML = ansiToHtml((validationTerminal.innerText || "") + "\n\nConnection error: " + err.message);
       showToast("Failed to connect to backend", "error");
     }
+    if (validationFormCard) validationFormCard.classList.remove("validation-running");
     validateBtn.classList.remove("running");
     updateValidationButtonStates();
   };
@@ -973,6 +1101,8 @@ function initValidationTab() {
       if (validationResult) { validationResult.textContent = ""; validationResult.className = "validation-result"; }
     };
   }
+
+  updateValidationButtonStates();
 }
 
 function showValidationResultModal(data) {

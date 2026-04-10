@@ -1,7 +1,0 @@
----
-# Default: standalone switch
-stack:
-  enabled: false
-
-# Default: assume master (safe for standalone)
-is_stack_master: true

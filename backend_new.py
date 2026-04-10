@@ -22,7 +22,7 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
 # CONFIG
 # =====================================================
 
-WORK_DIR = "/home/swnuc01/arun/stkForge-temp/ImagePacking"              #"/home/vspl007/Downloads/Management_switch_Package/ImagePacking"
+WORK_DIR = "/home/vspl007/Downloads/Management_switch_Package/ImagePacking"
 SCRIPT_PATH = os.path.join(WORK_DIR, "run_packaging.sh")
 JOBS_DIR = os.path.join(WORK_DIR, "jobs")
 LOG_DIR = os.path.join(WORK_DIR, "logs")
@@ -508,6 +508,24 @@ def _run_ansible_playbook(platform_extra_var):
 VALIDATION_STREAM_RESULT_MARKER = "\n---RESULT---\n"
 
 
+def _clear_validation_stk_uploads():
+    """Remove all files (and subdirs) under validation_stk_uploads after validation ends."""
+    try:
+        if not os.path.isdir(VALIDATION_STK_DIR):
+            return
+        for name in os.listdir(VALIDATION_STK_DIR):
+            path = os.path.join(VALIDATION_STK_DIR, name)
+            try:
+                if os.path.isfile(path) or os.path.islink(path):
+                    os.remove(path)
+                elif os.path.isdir(path):
+                    shutil.rmtree(path)
+            except OSError as ex:
+                print("[Validate] cleanup skip %s: %s" % (path, ex))
+    except OSError as ex:
+        print("[Validate] cleanup validation_stk_uploads failed: %s" % ex)
+
+
 VALIDATION_LOG_HEADER = (
     "\n"
     "===============================================================================\n"
@@ -629,6 +647,7 @@ def validate():
 
     vars_path = _get_vars_path(platform_vars_name)
     if not os.path.isdir(M4350_ANSIBLE_DIR):
+        _clear_validation_stk_uploads()
         return jsonify({"success": False, "message": "m4350_ansible directory not found"}), 500
     if not os.path.isfile(vars_path):
         return jsonify({
@@ -643,6 +662,7 @@ def validate():
         _update_m4350_inventory(switch_ip, switch_username, switch_password)
     except Exception as e:
         print("[Validate] Failed to update Ansible files:", e)
+        _clear_validation_stk_uploads()
         return jsonify({"success": False, "message": "Failed to update Ansible config: %s" % str(e)}), 500
 
     # Stream playbook output line by line, then send result JSON
@@ -699,27 +719,29 @@ def validate():
             })
             return
 
-        output = "".join(full_lines)
-        success = process.returncode == 0
-        application_table, appmgr_version = _parse_application_table_and_version(output)
-        log_filename = _write_validation_log(output, platform_vars_name, appmgr_version or "")
-        expected_ver = (expected_app_mgr_version or "").strip()
-        version_match = bool(expected_ver and appmgr_version and expected_ver == appmgr_version.strip())
-        application_table_name_version = _table_name_version_only(application_table)
-        result = {
-            "success": success,
-            "message": "Validation completed successfully" if (success and version_match) else ("Validation completed; version mismatch" if success else "Validation (Ansible) failed"),
-            "stk_file_path": dest_path,
-            "log_file": log_filename,
-            "application_table": application_table,
-            "application_table_name_version": application_table_name_version,
-            "appmgr_version": appmgr_version or None,
-            "expected_version": expected_ver or None,
-            "version_match": version_match,
-        }
-        if not success:
-            result["details"] = output[:2000] if output else ""
-        yield VALIDATION_STREAM_RESULT_MARKER + json.dumps(result)
+            output = "".join(full_lines)
+            success = process.returncode == 0
+            application_table, appmgr_version = _parse_application_table_and_version(output)
+            log_filename = _write_validation_log(output, platform_vars_name, appmgr_version or "")
+            expected_ver = (expected_app_mgr_version or "").strip()
+            version_match = bool(expected_ver and appmgr_version and expected_ver == appmgr_version.strip())
+            application_table_name_version = _table_name_version_only(application_table)
+            result = {
+                "success": success,
+                "message": "Validation completed successfully" if (success and version_match) else ("Validation completed; version mismatch" if success else "Validation (Ansible) failed"),
+                "stk_file_path": dest_path,
+                "log_file": log_filename,
+                "application_table": application_table,
+                "application_table_name_version": application_table_name_version,
+                "appmgr_version": appmgr_version or None,
+                "expected_version": expected_ver or None,
+                "version_match": version_match,
+            }
+            if not success:
+                result["details"] = output[:2000] if output else ""
+            yield VALIDATION_STREAM_RESULT_MARKER + json.dumps(result)
+        finally:
+            _clear_validation_stk_uploads()
 
     return Response(
         stream_with_context(generate()),

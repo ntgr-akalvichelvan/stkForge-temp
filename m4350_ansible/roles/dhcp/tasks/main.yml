@@ -1,6 +1,0 @@
-- name: Configure DHCP
-  shell: |
-    sshpass -p "{{ vault_switch_password }}" ssh -tt {{ ansible_user }}@{{ ansible_host }} << 'EOF'
-    {{ lookup('template', 'dhcp.j2') }}
-    EOF
-  when: is_stack_master

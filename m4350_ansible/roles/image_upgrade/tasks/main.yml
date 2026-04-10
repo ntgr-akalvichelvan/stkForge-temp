@@ -1,6 +1,0 @@
----
-- include_tasks: qualify.yml
-- include_tasks: transfer.yml
-- include_tasks: save_reload.yml
-- include_tasks: wait_reboot.yml
-- include_tasks: validate.yml

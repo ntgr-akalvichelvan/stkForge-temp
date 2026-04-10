@@ -1,3 +1,0 @@
-- include_tasks: show_application.yml
-#- include_tasks: parse_application.yml
-#- include_tasks: validate_application.yml
