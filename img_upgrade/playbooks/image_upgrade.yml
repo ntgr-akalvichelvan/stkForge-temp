@@ -1,0 +1,7 @@
+---
+- name: Netgear Image Upgrade
+  hosts: switches
+  gather_facts: no
+
+  roles:
+    - image_upgrade

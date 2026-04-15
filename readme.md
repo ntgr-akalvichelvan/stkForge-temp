@@ -23,12 +23,15 @@
     9) apt install device-tree-compiler (needed for dtc compilation)
 
 ## Start Backend & Frontend Server
+Validation (`/validate`) streams ansible for a long time. **Do not use `--timeout 600`** — Gunicorn will kill the worker (~10 min) mid-playbook, the browser stream dies, and no `---RESULT---` JSON is sent. Prefer **`--timeout 0`** (disable worker timeout) or **`7200`** or higher.
+
 ```bash
-        gunicorn -w 4 -b 0.0.0.0:8000 --timeout 600 backend_new:app
+gunicorn -w 4 -b 0.0.0.0:8000 --timeout 0 backend_new:app
+# or: gunicorn -c gunicorn.conf.py backend_new:app
 ```
 **for Running the server in BackGround**
 ```bash
-    nohup gunicorn -w 4 -b 0.0.0.0:8000 --timeout 600 backend_new:app > gunicorn.log 2>&1 &
+nohup gunicorn -w 4 -b 0.0.0.0:8000 --timeout 0 backend_new:app > gunicorn.log 2>&1 &
 ```
 
 ## Minor bug fix and New feature

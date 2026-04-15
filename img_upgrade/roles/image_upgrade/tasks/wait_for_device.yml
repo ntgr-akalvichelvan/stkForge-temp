@@ -1,0 +1,8 @@
+---
+- name: Wait for switch to come back after reboot
+  delegate_to: localhost
+  wait_for:
+    host: "{{ ansible_host }}"
+    port: 22
+    delay: 250
+    timeout: 300

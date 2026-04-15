@@ -151,6 +151,7 @@
   <div class="validation-tab-shell">
   <div class="card validation-form-card" id="validationFormCard">
     <h2 class="logs-title validation-page-title">Validation</h2>
+    <div id="validationFormBody" class="validation-form-body">
     <div class="validation-mockup-grid">
       <div class="validation-col validation-col-left">
         <div class="validation-left-stk">
@@ -209,11 +210,15 @@
       </div>
     </div>
     <div id="validationResult" class="validation-result"></div>
-  </div>
-  <div class="validation-terminal-wrap" id="validationTerminalWrap" style="display: none;">
-    <div class="validation-terminal-header">Ansible output</div>
-    <pre class="validation-terminal" id="validationTerminal"></pre>
-    <button type="button" class="btn-validation-back" id="validationBackBtn">Run again</button>
+    </div>
+    <div id="validationTerminalPanel" class="validation-terminal-panel" hidden>
+      <div class="validation-terminal-inner">
+        <div class="validation-terminal-header">Image upgrade validation</div>
+        <p class="validation-terminal-tagline">This might take several minutes.</p>
+        <pre class="validation-terminal" id="validationTerminal"></pre>
+      </div>
+      <button type="button" class="btn-validation-back" id="validationBackBtn">Run again</button>
+    </div>
   </div>
   </div>
 </div>
@@ -249,6 +254,7 @@
   <div class="modal-box validation-result-modal-box">
     <div id="validationModalTitle" class="validation-modal-title validation-modal-success">Validation complete</div>
     <div id="validationModalMessage" class="validation-modal-message"></div>
+    <div id="validationModalExpected" class="validation-modal-expected" hidden></div>
     <pre id="validationModalTable" class="validation-modal-table"></pre>
     <div class="validation-modal-actions">
       <button type="button" id="validationModalClose" class="btn-validation-modal-close">Close</button>

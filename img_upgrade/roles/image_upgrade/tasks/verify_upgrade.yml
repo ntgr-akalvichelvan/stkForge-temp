@@ -1,0 +1,115 @@
+---
+
+############################
+# SHOW VERSION
+############################
+
+- name: Get show version output (retry until stable)
+  delegate_to: localhost
+  retries: 10
+  delay: 20
+  register: show_version_output
+  until: show_version_output.rc == 0
+  ansible.builtin.shell: |
+    /usr/bin/expect << 'EOF'
+    set timeout 30
+    spawn ssh -o StrictHostKeyChecking=no {{ ansible_user }}@{{ ansible_host }}
+
+    expect {
+      "Connection reset" { exit 1 }
+      "kex_exchange_identification" { exit 1 }
+      timeout { exit 1 }
+      eof { exit 1 }
+      "assword:" { send "{{ ansible_password }}\r" }
+    }
+
+    expect ">"
+    send "en\r"
+
+    expect "#"
+    send "show version\r"
+
+    expect "#"
+    send "exit\r"
+
+    expect eof
+    EOF
+  args:
+    executable: /bin/bash
+
+
+- name: Extract software version
+  set_fact:
+    # regex_findall returns list consistently in Ansible 2.19+; pick first match or empty string.
+    extracted_version: "{{ (show_version_output.stdout | regex_findall('Software Version\\.*\\s+([0-9\\.]+)') | first) | default('', true) }}"
+
+
+############################
+# SHOW APPLICATION
+############################
+
+- name: Get show application output (retry until stable)
+  delegate_to: localhost
+  retries: 10
+  delay: 20
+  register: show_app_output
+  until: show_app_output.rc == 0
+  ansible.builtin.shell: |
+    /usr/bin/expect << 'EOF'
+    set timeout 30
+    spawn ssh -o StrictHostKeyChecking=no {{ ansible_user }}@{{ ansible_host }}
+
+    expect {
+      "Connection reset" { exit 1 }
+      "kex_exchange_identification" { exit 1 }
+      timeout { exit 1 }
+      eof { exit 1 }
+      "assword:" { send "{{ ansible_password }}\r" }
+    }
+
+    expect ">"
+    send "en\r"
+
+    expect "#"
+    send "show application\r"
+
+    expect "#"
+    send "exit\r"
+
+    expect eof
+    EOF
+  args:
+    executable: /bin/bash
+
+
+- name: Extract appmgr version
+  set_fact:
+    # Match the appmgr table row and take the trailing a.b.c.d (works with 1+ table rows and spacing variants)
+    extracted_appmgr_version: "{{ (show_app_output.stdout | regex_findall('(?m)^\\s*appmgr\\s+.*\\s+([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})\\s*$') | first) | default('', true) }}"
+
+
+- name: Normalize versions for strict compare
+  set_fact:
+    extracted_version_norm: "{{ (extracted_version | string | regex_search('([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)', '\\1') | default('', true)) }}"
+    extracted_appmgr_version_norm: "{{ (extracted_appmgr_version | string | regex_search('([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)', '\\1') | default('', true)) }}"
+    expected_image_version_norm: "{{ (expected_image_version | string | regex_search('([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)', '\\1') | default('', true)) }}"
+    expected_appmgr_version_norm: "{{ (expected_appmgr_version | string | regex_search('([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)', '\\1') | default('', true)) }}"
+
+
+############################
+# VALIDATION FLAGS
+############################
+
+- name: Set validation result
+  set_fact:
+    upgrade_success: "{{ (extracted_version_norm == expected_image_version_norm) and (extracted_appmgr_version_norm == expected_appmgr_version_norm) }}"
+
+
+- name: Debug validation result
+  debug:
+    msg:
+      - "Extracted Image Version: {{ extracted_version_norm }}"
+      - "Expected Image Version: {{ expected_image_version }}"
+      - "Extracted AppMgr Version: {{ extracted_appmgr_version_norm }}"
+      - "Expected AppMgr Version: {{ expected_appmgr_version }}"
+      - "Upgrade Success: {{ upgrade_success }}"

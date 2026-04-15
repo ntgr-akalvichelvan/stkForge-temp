@@ -42,12 +42,16 @@ const validationResult = document.getElementById("validationResult");
 const validationPlatformValue = document.getElementById("validationPlatformValue");
 const validationImageVersionValue = document.getElementById("validationImageVersionValue");
 const validationFormCard = document.getElementById("validationFormCard");
+const validationFormBody = document.getElementById("validationFormBody");
 const appContainer = document.querySelector(".app");
-const validationTerminalWrap = document.getElementById("validationTerminalWrap");
+const appWrapper = document.querySelector(".app-wrapper");
+const validationTerminalPanel = document.getElementById("validationTerminalPanel");
 const validationTerminal = document.getElementById("validationTerminal");
 const validationBackBtn = document.getElementById("validationBackBtn");
+const validationTabShell = document.querySelector(".validation-tab-shell");
 
 let validationDetectedPlatform = "";  // set from STK filename when file selected (e.g. M4350)
+let validationModalShouldClearOnClose = false;
 
 const VALIDATION_PREVIEW_EMPTY = "Select an .stk file to preview";
 const VALIDATION_PLATFORM_UNKNOWN = "Not detected from this filename";
@@ -55,6 +59,7 @@ const VALIDATION_VERSION_UNKNOWN = "No version found in filename";
 
 const VALIDATION_RESULT_MARKER = "\n---RESULT---\n";
 
+<<<<<<< HEAD
 /**
  * Convert ANSI escape codes (e.g. from Ansible) to HTML for colored terminal output.
  * Escapes HTML first, then replaces SGR codes with <span> styles.
@@ -107,6 +112,109 @@ function ansiToHtml(text) {
   }
   out += s.slice(lastIndex);
   return "<span>" + out + "</span>";
+=======
+/** Ansible/SSH often emit \\r without \\n; browsers keep \\r in <pre> so lines glue together. */
+function validationTerminalDisplayText(raw) {
+  if (raw == null) return "";
+  return String(raw).replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+function mergeValidationModalMessage(data, fallback) {
+  if (!data) return fallback;
+  const a = String(data.message || "").trim();
+  const b = String(data.ansible_fatal_message || "").trim();
+  if (a && b && a.includes(b)) return a || fallback;
+  if (a && b) return a + "\n\n" + b;
+  return a || b || fallback;
+}
+
+function extractSshErrorLineFromValidationData(data) {
+  if (!data) return "";
+  const blob = [data.message, data.ansible_fatal_message, data.details]
+    .filter(Boolean)
+    .join("\n");
+  if (!blob) return "";
+  const text = String(blob)
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\r/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+  const lineMatch = text.match(/ssh:[^\n\r]+/i);
+  if (!lineMatch) return "";
+  const line = lineMatch[0].trim();
+  const low = line.toLowerCase();
+  if (
+    low.includes("connection refused") ||
+    low.includes("connection timed out") ||
+    low.includes("no route to host") ||
+    low.includes("network is unreachable") ||
+    low.includes("could not resolve hostname") ||
+    low.includes("host key verification failed") ||
+    low.includes("permission denied") ||
+    low.includes("operation timed out")
+  ) {
+    return line;
+  }
+  return "";
+}
+
+function setValidationTerminalVisible(show) {
+  if (validationTerminalPanel) validationTerminalPanel.hidden = !show;
+}
+
+function resetValidationLayoutToForm() {
+  if (validationFormBody) validationFormBody.hidden = false;
+  setValidationTerminalVisible(false);
+  if (validationTabShell) validationTabShell.classList.remove("validation-terminal-only");
+  if (validationFormCard) validationFormCard.classList.remove("validation-terminal-active");
+  if (appWrapper) appWrapper.classList.remove("app-wrapper--validation-terminal");
+}
+
+function showValidationTerminalLayout() {
+  if (validationFormBody) validationFormBody.hidden = true;
+  setValidationTerminalVisible(true);
+  if (validationTabShell) validationTabShell.classList.add("validation-terminal-only");
+  if (validationFormCard) validationFormCard.classList.add("validation-terminal-active");
+  if (appWrapper) appWrapper.classList.add("app-wrapper--validation-terminal");
+}
+
+function setValidationRunAgainEnabled(enabled) {
+  if (validationBackBtn) validationBackBtn.disabled = !enabled;
+}
+
+function resetValidationPreviewEmptyUi() {
+  if (validationPlatformValue) {
+    validationPlatformValue.textContent = VALIDATION_PREVIEW_EMPTY;
+    validationPlatformValue.classList.add("is-empty");
+  }
+  if (validationImageVersionValue) {
+    validationImageVersionValue.textContent = VALIDATION_PREVIEW_EMPTY;
+    validationImageVersionValue.classList.add("is-empty");
+  }
+}
+
+function clearValidationInputs() {
+  if (validationStkInput) validationStkInput.value = "";
+  if (validationStkBtnText) validationStkBtnText.textContent = "Select STK File";
+  if (validationStkBtn) {
+    const icon = validationStkBtn.querySelector(".upload-icon");
+    if (icon) icon.textContent = "⬆";
+    validationStkBtn.classList.remove("has-file");
+  }
+  validationDetectedPlatform = "";
+  if (switchIp) switchIp.value = "";
+  if (switchUsername) switchUsername.value = "";
+  if (switchPassword) switchPassword.value = "";
+  if (expectedAppMgrVersion) expectedAppMgrVersion.value = "";
+  resetValidationPreviewEmptyUi();
+  if (validationTerminal) validationTerminal.textContent = "";
+  if (validationResult) {
+    validationResult.textContent = "";
+    validationResult.className = "validation-result";
+  }
+  updateValidationButtonStates();
+>>>>>>> e1be0f9 (Untested Validation UI page, merged Ansible)
 }
 
 // Display platform in lowercase for UI (m4350, m4300, m4250H, m4250L)
@@ -141,6 +249,13 @@ tabButtons.forEach(btn => {
     if (appContainer) {
       if (tabId === "tab3") appContainer.classList.add("app--validation-wide");
       else appContainer.classList.remove("app--validation-wide");
+    }
+    if (appWrapper) {
+      if (tabId === "tab3" && validationTabShell && validationTabShell.classList.contains("validation-terminal-only")) {
+        appWrapper.classList.add("app-wrapper--validation-terminal");
+      } else {
+        appWrapper.classList.remove("app-wrapper--validation-terminal");
+      }
     }
     if (tabId === "tab2") {
       loadLogs();
@@ -1023,9 +1138,17 @@ function initValidationTab() {
     validateBtn.classList.add("running");
     validateBtn.disabled = true;
 
+<<<<<<< HEAD
     if (validationFormCard) validationFormCard.classList.add("validation-running");
     if (validationTerminalWrap) validationTerminalWrap.style.display = "block";
     if (validationTerminal) validationTerminal.innerHTML = ansiToHtml("Running ansible-playbook...\n\n");
+=======
+    if (validationFormCard) validationFormCard.classList.remove("validation-running");
+    showValidationTerminalLayout();
+    setValidationRunAgainEnabled(false);
+    if (validationTerminal) validationTerminal.textContent = "Running image upgrade validation (ansible)...\n\n";
+    validationTerminalPanel?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+>>>>>>> e1be0f9 (Untested Validation UI page, merged Ansible)
 
     const formData = new FormData();
     formData.append("stkFile", file);
@@ -1040,12 +1163,13 @@ function initValidationTab() {
       const contentType = response.headers.get("content-type") || "";
       if (contentType.includes("application/json")) {
         const data = await response.json().catch(() => ({}));
-        if (validationFormCard) validationFormCard.classList.remove("validation-running");
-        if (validationTerminalWrap) validationTerminalWrap.style.display = "none";
+        resetValidationLayoutToForm();
         showToast(data.message || "Validation failed", "error");
-        if (data.application_table !== undefined) showValidationResultModal(data);
-        validateBtn.classList.remove("running");
-        updateValidationButtonStates();
+        const showValModal =
+          data.application_table !== undefined
+          || data.error_kind
+          || (data.success === true && data.version_match === false);
+        if (showValModal) showValidationResultModal(data);
         return;
       }
       if (!response.body) {
@@ -1059,13 +1183,23 @@ function initValidationTab() {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
         if (validationTerminal) {
+<<<<<<< HEAD
           validationTerminal.innerHTML = ansiToHtml(buffer);
           validationTerminal.scrollTop = validationTerminal.scrollHeight;
+=======
+          validationTerminal.textContent = validationTerminalDisplayText(buffer);
+          validationTerminal.scrollTop = validationTerminal.scrollHeight;
+          validationTerminal.scrollLeft = 0;
+>>>>>>> e1be0f9 (Untested Validation UI page, merged Ansible)
         }
       }
       const idx = buffer.indexOf(VALIDATION_RESULT_MARKER);
       if (idx !== -1) {
+<<<<<<< HEAD
         if (validationTerminal) validationTerminal.innerHTML = ansiToHtml(buffer.slice(0, idx));
+=======
+        if (validationTerminal) validationTerminal.textContent = validationTerminalDisplayText(buffer.slice(0, idx));
+>>>>>>> e1be0f9 (Untested Validation UI page, merged Ansible)
         const jsonStr = buffer.slice(idx + VALIDATION_RESULT_MARKER.length).trim();
         try {
           const data = JSON.parse(jsonStr);
@@ -1073,31 +1207,60 @@ function initValidationTab() {
             validationResult.textContent = data.message || "";
             validationResult.className = data.success ? "validation-result validation-result-success" : "validation-result validation-result-error";
           }
-          if (data.success) showToast(data.message || "Validation completed", "success");
-          else showToast(data.message || "Validation failed", "error");
+          if (data.success && data.version_match === true) {
+            showToast(data.message || "Validation completed", "success");
+          } else if (data.success && data.version_match === false) {
+            showToast(data.message || "Version mismatch — see details in the dialog.", "warning");
+          } else {
+            showToast(data.message || "Validation failed", "error");
+          }
           showValidationResultModal(data);
+          /* Keep form hidden; only terminal + modal until Run again */
         } catch (e) {
           console.error(e);
           showToast("Invalid result from server", "error");
+          resetValidationLayoutToForm();
         }
       } else if (validationTerminal) {
+<<<<<<< HEAD
         validationTerminal.innerHTML = ansiToHtml(buffer || "(No output)");
       }
     } catch (err) {
       console.error(err);
       if (validationTerminal) validationTerminal.innerHTML = ansiToHtml((validationTerminal.innerText || "") + "\n\nConnection error: " + err.message);
+=======
+        validationTerminal.textContent = validationTerminalDisplayText(buffer || "(No output)");
+        showToast("Validation finished without a result marker from the server.", "warning");
+        resetValidationLayoutToForm();
+      }
+    } catch (err) {
+      console.error(err);
+      if (validationTerminal) {
+        validationTerminal.textContent = validationTerminalDisplayText(
+          validationTerminal.textContent + "\n\nConnection error: " + err.message
+        );
+      }
+>>>>>>> e1be0f9 (Untested Validation UI page, merged Ansible)
       showToast("Failed to connect to backend", "error");
+      resetValidationLayoutToForm();
+    } finally {
+      validateBtn.classList.remove("running");
+      updateValidationButtonStates();
+      setValidationRunAgainEnabled(true);
     }
-    if (validationFormCard) validationFormCard.classList.remove("validation-running");
-    validateBtn.classList.remove("running");
-    updateValidationButtonStates();
   };
 
   if (validationBackBtn) {
     validationBackBtn.onclick = () => {
+<<<<<<< HEAD
       if (validationTerminalWrap) validationTerminalWrap.style.display = "none";
       if (validationFormCard) validationFormCard.style.display = "block";
       if (validationTerminal) validationTerminal.innerHTML = "";
+=======
+      resetValidationLayoutToForm();
+      if (validationFormCard) validationFormCard.classList.remove("validation-running");
+      if (validationTerminal) validationTerminal.textContent = "";
+>>>>>>> e1be0f9 (Untested Validation UI page, merged Ansible)
       if (validationResult) { validationResult.textContent = ""; validationResult.className = "validation-result"; }
     };
   }
@@ -1105,47 +1268,204 @@ function initValidationTab() {
   updateValidationButtonStates();
 }
 
+function validationModalDash(val) {
+  if (val == null || String(val).trim() === "") return "—";
+  return String(val).trim();
+}
+
+/** Pad/truncate cell (left-aligned) for title column. */
+function validationModalCell(val, width) {
+  const v = validationModalDash(val);
+  if (v === "—") return "—".padEnd(width);
+  if (v.length <= width) return v.padEnd(width);
+  return v.slice(0, Math.max(3, width - 1)) + "…";
+}
+
+/** Center value within fixed width (expected / Actual columns). */
+function validationModalCellCenter(val, width) {
+  const v = validationModalDash(val);
+  if (v.length > width) return v.slice(0, Math.max(3, width - 1)) + "…";
+  const pad = width - v.length;
+  const left = Math.floor(pad / 2);
+  return " ".repeat(left) + v + " ".repeat(pad - left);
+}
+
+/**
+ * Dark panel: compare expected vs actual.
+ * Columns: title (left) | expected (center) | Actual (center)
+ */
+function buildValidationModalCompareTable(data) {
+  const c1 = 14;
+  const c2 = 28;
+  const c3 = 28;
+  const sepW = c1 + 3 + c2 + 3 + c3;
+  const row3 = (a, b, c, centerData) => {
+    const colA = validationModalCell(a, c1);
+    const colB = centerData ? validationModalCellCenter(b, c2) : validationModalCell(b, c2);
+    const colC = centerData ? validationModalCellCenter(c, c3) : validationModalCell(c, c3);
+    return colA + " | " + colB + " | " + colC;
+  };
+  return [
+    row3("title", "expected", "Actual", true),
+    "-".repeat(sepW),
+    row3("software", data.expected_image_version, data.image_version, true),
+    row3("app-mgr", data.expected_version, data.appmgr_version, true),
+  ].join("\n");
+}
+
+/** True if application table has real rows (not just headers / dashes / —). */
+function validationModalApplicationTableUseful(text) {
+  if (!text || !String(text).trim()) return false;
+  const lines = String(text)
+    .split(/\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const meaningful = lines.filter((l) => {
+    if (/^Name\s+Version$/i.test(l.replace(/\s+/g, " ").trim())) return false;
+    if (/^-+$/.test(l)) return false;
+    if (l === "—") return false;
+    return true;
+  });
+  return meaningful.length > 0;
+}
+
 function showValidationResultModal(data) {
   const modal = document.getElementById("validationResultModal");
   const titleEl = document.getElementById("validationModalTitle");
   const messageEl = document.getElementById("validationModalMessage");
+  const expectedEl = document.getElementById("validationModalExpected");
   const tableEl = document.getElementById("validationModalTable");
   if (!modal || !titleEl || !messageEl || !tableEl) return;
-  titleEl.classList.remove("validation-modal-success", "validation-modal-mismatch", "validation-modal-failed");
-  modal.classList.remove("validation-modal-success", "validation-modal-mismatch", "validation-modal-failed");
+
+  const setErrMsg = (fallback) => {
+    messageEl.textContent = mergeValidationModalMessage(data, fallback);
+  };
+
+  function applyExpectedStrip() {
+    if (!expectedEl) return;
+    expectedEl.textContent = "";
+    expectedEl.hidden = true;
+  }
+
+  function composeTableText(kind) {
+    let t = buildValidationModalCompareTable(data);
+    const appTbl = (data.application_table_name_version && data.application_table_name_version.trim())
+      || (data.application_table && data.application_table.trim())
+      || "";
+    const appOk = validationModalApplicationTableUseful(appTbl);
+    if (appOk && data && data.success === true && data.version_match === true) {
+      t += "\n\nshow application:\n" + appTbl.trim();
+    }
+    if (kind === "ansible_failed") {
+      const det = (data.ansible_fatal_message || "").trim();
+      if (det) t += "\n\n—\n" + det.slice(0, 1800);
+    }
+    if (kind === "image_mismatch" && !appOk) {
+      t += "\n\n(No application data — platform check ran before upgrade.)";
+    }
+    return t;
+  }
+
+  titleEl.classList.remove(
+    "validation-modal-success", "validation-modal-mismatch", "validation-modal-failed", "validation-modal-image-mismatch"
+  );
+  modal.classList.remove(
+    "validation-modal-success", "validation-modal-mismatch", "validation-modal-failed", "validation-modal-image-mismatch"
+  );
   const success = data && data.success === true;
   const versionMatch = data && data.version_match === true;
-  if (success && versionMatch) {
-    titleEl.textContent = "Success";
-    titleEl.classList.add("validation-modal-success");
-    modal.classList.add("validation-modal-success");
-    messageEl.textContent = data.expected_version
-      ? "Expected App-Mgr version matches: " + (data.appmgr_version || data.expected_version)
-      : "Validation completed successfully.";
-  } else if (success && !versionMatch) {
+  const kind = data && data.error_kind;
+  const sshDetectedLine = extractSshErrorLineFromValidationData(data);
+  validationModalShouldClearOnClose = !!(success && versionMatch);
+
+  if (kind === "image_mismatch") {
+    titleEl.textContent = "Image mismatch";
+    titleEl.classList.add("validation-modal-image-mismatch");
+    modal.classList.add("validation-modal-image-mismatch");
+    messageEl.textContent = "This STK does not match the connected switch model.";
+  } else if (kind === "upgrade_failed") {
+    titleEl.textContent = "Upgrade check failed";
+    titleEl.classList.add("validation-modal-mismatch");
+    modal.classList.add("validation-modal-mismatch");
+    {
+      let body = "The test image did not match your expected versions. The switch was reverted.";
+      const fat = (data.ansible_fatal_message || "").trim();
+      const msg = (data.message || "").trim();
+      if (fat) body += "\n\n" + fat;
+      else if (msg && !/^test image did not match/i.test(msg)) body += "\n\n" + msg;
+      messageEl.textContent = body;
+    }
+  } else if (kind === "timeout") {
+    titleEl.textContent = "Timed out";
+    titleEl.classList.add("validation-modal-failed");
+    modal.classList.add("validation-modal-failed");
+    setErrMsg("Ansible playbook timed out.");
+    applyExpectedStrip();
+    tableEl.textContent = composeTableText(kind);
+    modal.classList.add("show");
+    return;
+  } else if (kind === "ssh_unreachable") {
+    titleEl.textContent = "Cannot reach switch";
+    titleEl.classList.add("validation-modal-failed");
+    modal.classList.add("validation-modal-failed");
+    messageEl.textContent = mergeValidationModalMessage(
+      data,
+      "SSH connection failed. Check the switch IP and that SSH (port 22) is enabled.",
+    );
+  } else if (sshDetectedLine) {
+    titleEl.textContent = "Cannot reach switch";
+    titleEl.classList.add("validation-modal-failed");
+    modal.classList.add("validation-modal-failed");
+    messageEl.textContent =
+      sshDetectedLine
+      + "\n\nSSH might be disabled on the switch.";
+  } else if (kind === "ansible_missing" || kind === "ansible_failed" || kind === "config" || kind === "bad_filename") {
+    titleEl.textContent = "Validation error";
+    titleEl.classList.add("validation-modal-failed");
+    modal.classList.add("validation-modal-failed");
+    setErrMsg("Something went wrong.");
+    applyExpectedStrip();
+    tableEl.textContent = composeTableText(kind);
+    modal.classList.add("show");
+    return;
+  } else if (kind === "version_mismatch" || (success && !versionMatch)) {
     titleEl.textContent = "Version mismatch";
     titleEl.classList.add("validation-modal-mismatch");
     modal.classList.add("validation-modal-mismatch");
-    messageEl.textContent = data.expected_version && data.appmgr_version
-      ? "Expected " + data.expected_version + ", switch has " + data.appmgr_version
-      : "Validation completed but version could not be verified.";
+    messageEl.textContent =
+      "Expected and actual versions differ. Compare the columns in the table below.";
+  } else if (success && versionMatch) {
+    titleEl.textContent = "Success";
+    titleEl.classList.add("validation-modal-success");
+    modal.classList.add("validation-modal-success");
+    messageEl.textContent =
+      "Reported firmware and App-Mgr match your expected versions. Details are in the table below.";
   } else {
     titleEl.textContent = "Validation failed";
     titleEl.classList.add("validation-modal-failed");
     modal.classList.add("validation-modal-failed");
-    messageEl.textContent = data.message || "Ansible playbook failed.";
+    setErrMsg("Ansible playbook failed.");
+    applyExpectedStrip();
+    tableEl.textContent = composeTableText(kind);
+    modal.classList.add("show");
+    return;
   }
-  tableEl.textContent = (data.application_table_name_version && data.application_table_name_version.trim())
-    ? data.application_table_name_version.trim()
-    : (data.application_table && data.application_table.trim())
-      ? data.application_table.trim()
-      : "(No application table in output)";
+
+  applyExpectedStrip();
+  tableEl.textContent = composeTableText(kind || "");
   modal.classList.add("show");
 }
 
 document.getElementById("validationModalClose") && document.getElementById("validationModalClose").addEventListener("click", () => {
   const modal = document.getElementById("validationResultModal");
   if (modal) modal.classList.remove("show");
+  resetValidationLayoutToForm();
+  if (validationFormCard) validationFormCard.classList.remove("validation-running");
+  setValidationRunAgainEnabled(true);
+  if (validationModalShouldClearOnClose) {
+    clearValidationInputs();
+  }
+  validationModalShouldClearOnClose = false;
 });
 
 initValidationTab();

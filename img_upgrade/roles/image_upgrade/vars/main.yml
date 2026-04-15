@@ -1,0 +1,7 @@
+image_server_username: "swnuc01"
+image_server_host: "10.25.4.201"
+image_path: "/home/swnuc01/arun/stkForge-temp/validation_stk_uploads"
+image_file: "M4350-v14.0.6.19.stk"
+expected_image_version: "14.0.6.19"
+expected_appmgr_version: "1.0.5.27"
+image_server_password: "switch@123"

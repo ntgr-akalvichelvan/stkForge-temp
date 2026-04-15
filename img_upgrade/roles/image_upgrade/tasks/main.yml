@@ -1,0 +1,40 @@
+---
+- include_tasks: check_platform.yml
+- include_tasks: check_bootvar.yml
+- include_tasks: copy_image.yml
+
+# Boot into TEST image
+- name: Boot into test image
+  vars:
+    boot_image: "{{ boot_image_test }}"
+  include_tasks: boot_and_reload.yml
+
+- include_tasks: wait_for_device.yml
+
+- include_tasks: verify_upgrade.yml
+
+
+# CONDITIONAL REVERT
+
+- name: Revert to original image if upgrade failed
+  when: not upgrade_success
+  block:
+
+    - name: Boot back to original image
+      vars:
+        boot_image: "{{ boot_image_revert }}"
+      include_tasks: boot_and_reload.yml
+
+    - include_tasks: wait_for_device.yml
+
+    - name: Fail the play
+      fail:
+        msg: "Upgrade failed. Device reverted to original image {{ boot_image_revert }}"
+
+
+# SUCCESS CASE
+
+- name: Upgrade success message
+  when: upgrade_success
+  debug:
+    msg: "Upgrade successful. Staying on new image {{ boot_image_test }}"

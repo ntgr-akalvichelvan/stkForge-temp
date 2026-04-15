@@ -1,0 +1,38 @@
+---
+- name: Copy image to image2 (test slot)
+  delegate_to: localhost
+  ansible.builtin.shell: |
+    /usr/bin/expect << 'EOF'
+    set timeout 1200
+
+    spawn ssh -o StrictHostKeyChecking=no {{ ansible_user }}@{{ ansible_host }}
+
+    expect "assword:"
+    send "{{ ansible_password }}\r"
+
+    expect ">"
+    send "en\r"
+
+    expect "#"
+    send "copy scp://{{ image_server_username }}@{{ image_server_host }}{{ image_path }}/{{ image_file }} {{ boot_image_test }}\r"
+
+    expect "Remote Password:"
+    send "{{ image_server_password }}\r"
+
+    expect "(y/n)"
+    send "y\r"
+
+    expect "#"
+
+    send "exit\r"
+    expect ">"
+    send "exit\r"
+
+    EOF
+  args:
+    executable: /bin/bash
+  register: copy_output
+
+- name: Show copy result
+  debug:
+    var: copy_output.stdout
