@@ -6,7 +6,7 @@
 **function:** Unpacks the Image file (.stk), swaps old app-mgr file with new app-mgr file and changes the version
               to give new Image file
 
-   *Hosting in NUC -> swnuc04 (IP: 10.25.5.0)*
+   *Hosting in NUC -> swnuc01 (IP: 10.25.4.201)*
 
 ## Path in NUC:
     `/home/swnuc04/arun/stkForge-temp/ImagePacking`
@@ -34,6 +34,11 @@ gunicorn -w 4 -b 0.0.0.0:8000 --timeout 0 backend_new:app
 nohup gunicorn -w 4 -b 0.0.0.0:8000 --timeout 0 backend_new:app > gunicorn.log 2>&1 &
 ```
 
+## New handling of Image
+
+Image for Download will not be stacked in browser cache (first) and downloaded when the button pressed
+It will initate download after the download button is pressed.
+
 ## Minor bug fix and New feature
 
 Adding Ability to view logs without downloading
@@ -42,5 +47,5 @@ Adding Ability to view logs without downloading
 
 Adding UI and Ansible script to validate the image script for detecting app-mgr version
 
-m4350_ansible folder is added.
-
+custom ansible script for all platform image validation added,
+UN-TESTED (M4250, M4350, M4300)

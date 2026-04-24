@@ -292,14 +292,19 @@ def download(job_id):
 
     delete_job(job_id)
 
-    return Response(
+    resp = Response(
         file_data,
         mimetype="application/octet-stream",
         headers={
             "Content-Disposition":
-            f"attachment; filename={os.path.basename(output_path)}"
+            f'attachment; filename="{os.path.basename(output_path)}"'
         }
     )
+    # Make the end-of-response unambiguous for any intermediaries.
+    resp.headers["Connection"] = "close"
+    resp.headers["Cache-Control"] = "no-store"
+    resp.headers["X-Accel-Buffering"] = "no"
+    return resp
 
 @app.route("/logs")
 def list_logs():

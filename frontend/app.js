@@ -588,29 +588,25 @@ function startBackendProgress(jobId) {
 
         clearInterval(interval);
 
-        const fileResponse = await fetch(`/download/${jobId}`);
-        const blob = await fileResponse.blob();
-
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-
-        const disposition = fileResponse.headers.get("Content-Disposition");
-        let filename = "SIGNED_IMAGE.stk";
-
-        if (disposition && disposition.includes("filename=")) {
-          filename = disposition.split("filename=")[1];
+        // Don't buffer the whole STK into JS memory (fetch+blob). That can leave the
+        // UI stuck at 100% until the entire file transfer completes (or hangs).
+        // Instead, hand the download off to the browser immediately.
+        try {
+          const a = document.createElement("a");
+          a.href = `/download/${jobId}`;
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        } catch (err) {
+          console.error(err);
+          showToast("Package ready, but download didn't start automatically.", "warning");
         }
 
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
         jobRunning = false;
         resetFrontend();
         resetGenerateButton();
-        showToast("Package generated successfully", "success");
+        showToast("Package generated. Download starting...", "success");
       }
 
       if (status === "failed") {
